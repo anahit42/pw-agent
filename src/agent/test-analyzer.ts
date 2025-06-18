@@ -1,13 +1,13 @@
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from "@langchain/openai";
 import {
+    Annotation,
     StateGraph,
     MemorySaver,
-    MessagesAnnotation,
     END,
     START
 } from "@langchain/langgraph";
-import { HumanMessage } from "@langchain/core/messages";
+import { BaseMessage, HumanMessage } from "@langchain/core/messages";
 import {
     ChatPromptTemplate,
     MessagesPlaceholder,
@@ -20,14 +20,20 @@ import { unzipTraceFile } from './tools';
 
 const tools = [unzipTraceFile];
 const toolNode = new ToolNode(tools);
-const checkpointer = new MemorySaver();
+const memory = new MemorySaver();
 
 const modelWithTools = new ChatOpenAI({
     model: config.openai.model,
     temperature: config.openai.temperature,
 }).bindTools(tools);
 
-function shouldContinue (state: typeof MessagesAnnotation.State) {
+const GraphState = Annotation.Root({
+    messages: Annotation<BaseMessage[]>({
+        reducer: (x, y) => x.concat(y),
+    }),
+});
+
+function shouldContinue (state: typeof GraphState.State) {
     const { messages } = state;
     const lastMessage = messages[messages.length - 1];
 
@@ -40,7 +46,7 @@ function shouldContinue (state: typeof MessagesAnnotation.State) {
     return END;
 }
 
-async function callModel (state: typeof MessagesAnnotation.State) {
+async function callModel (state: typeof GraphState.State) {
     const prompt = ChatPromptTemplate.fromMessages([
         [
             "system",
@@ -61,14 +67,14 @@ async function callModel (state: typeof MessagesAnnotation.State) {
     return { messages: [result] };
 }
 
-const workflow = new StateGraph(MessagesAnnotation)
+const workflow = new StateGraph(GraphState)
     .addNode("agent", callModel)
     .addNode("tools", toolNode)
     .addEdge(START, "agent")
     .addConditionalEdges("agent", shouldContinue)
     .addEdge("tools", "agent");
 
-const graph = workflow.compile({ checkpointer });
+const graph = workflow.compile({ checkpointer: memory });
 
 function extractUuid(filePath: string): string | null {
     const match = filePath.match(/traces\/([0-9a-fA-F-]{36})\//);
