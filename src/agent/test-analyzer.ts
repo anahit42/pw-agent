@@ -87,7 +87,17 @@ export async function analyzeTraceFile(filePath: string) {
 
     const finalState = await graph.invoke(
         {
-            messages: [new HumanMessage(`Analyze Playwright trace file located in ${filePath}. Download it and unzip`)],
+            messages: [
+                new HumanMessage({
+                    content: `You are a debugging assistant for Playwright tests. Analyze the contents of this Playwright trace file and identify the cause of the test failure. Provide:
+1. A high-level summary of what the test is doing.
+2. The specific step where the test failed.
+3. The reason for the failure based on logs, network, or UI actions.
+4. Any useful suggestions for fixing the test.
+
+The trace file is located in ${filePath}.`
+                })
+            ],
         },
         { recursionLimit: 10, configurable: { thread_id: threadId } }
     );
