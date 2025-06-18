@@ -15,7 +15,7 @@ export const config = {
     secretAccessKey: process.env.S3_SECRET_KEY || 'minioadmin123',
     endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
     region: process.env.S3_REGION || 'us-east-1',
-    tracesBucketName: 'traces',
+    bucketName: process.env.S3_BUCKET || 'pw-agent-local',
     useMinio: process.env.USE_MINIO === 'true',
   },
 
