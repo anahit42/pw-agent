@@ -73,6 +73,7 @@ export async function uploadObject({
   contentType?: string
 }): Promise<void> {
   try {
+    logger.info(`Uploading object ${objectName} to bucket ${bucketName}`);
     await s3Client.send(new PutObjectCommand({
       Bucket: bucketName,
       Key: objectName,
