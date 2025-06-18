@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import { uploadTrace } from './controllers';
+
+import { analyzeTrace, uploadTrace } from './controllers';
 
 export const tracesRouter = Router();
 
@@ -18,5 +19,6 @@ const upload = multer({
     }
 });
 
+tracesRouter.post('/analyze', analyzeTrace);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 

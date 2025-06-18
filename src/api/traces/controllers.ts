@@ -4,6 +4,7 @@ import { v4 as generateUID } from 'uuid';
 import { createBucketIfNotExists, uploadObject } from '../../utils/s3';
 import { logger } from '../../utils/logger';
 import { config } from '../../config';
+import { analyzeTraceFile } from '../../agent/test-analyzer';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -28,5 +29,16 @@ export async function uploadTrace (req: Request, res: Response) {
         message: 'Trace file uploaded successfully',
         objectName,
         bucketName,
+    });
+}
+
+export async function analyzeTrace (req: Request, res: Response) {
+    const { traceFilePath } = req.body;
+
+    const result = await analyzeTraceFile(traceFilePath);
+
+    return res.status(200).json({
+        message: 'Trace file analyzed successfully',
+        result,
     });
 }
