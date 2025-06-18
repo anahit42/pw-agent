@@ -24,9 +24,9 @@ describe('S3 Utils with MinIO', () => {
   afterAll(async () => {
     // Cleanup: Delete test bucket and its contents
     try {
-      const objects = await listObjects(TEST_BUCKET);
+      const objects = await listObjects({ bucketName: TEST_BUCKET });
       for (const object of objects) {
-        await deleteObject(TEST_BUCKET, object);
+        await deleteObject({ bucketName: TEST_OBJECT, objectName: object });
       }
       // Note: MinIO doesn't support bucket deletion through the S3 API
       // You might need to implement a separate cleanup mechanism
@@ -49,47 +49,75 @@ describe('S3 Utils with MinIO', () => {
   describe('Object Operations', () => {
     it('should upload an object', async () => {
       await expect(
-        uploadObject(TEST_BUCKET, TEST_OBJECT, TEST_CONTENT, 'text/plain')
+        uploadObject({
+          bucketName: TEST_BUCKET,
+          objectName: TEST_OBJECT,
+          data: TEST_CONTENT,
+          contentType: 'text/plain',
+        })
       ).resolves.not.toThrow();
     });
 
     it('should check if object exists', async () => {
-      const exists = await checkObjectExists(TEST_BUCKET, TEST_OBJECT);
+      const exists = await checkObjectExists({
+        bucketName: TEST_BUCKET,
+        objectName: TEST_OBJECT
+      });
       expect(exists).toBe(true);
     });
 
     it('should download an object and verify content', async () => {
-      const content = await downloadObject(TEST_BUCKET, TEST_OBJECT);
+      const content = await downloadObject({
+        bucketName: TEST_BUCKET,
+        objectName: TEST_OBJECT
+      });
       expect(content.toString()).toBe(TEST_CONTENT);
     });
 
     it('should list objects in bucket', async () => {
-      const objects = await listObjects(TEST_BUCKET);
+      const objects = await listObjects({
+        bucketName: TEST_BUCKET,
+      });
       expect(objects).toContain(TEST_OBJECT);
     });
 
     it('should generate a signed URL for the object', async () => {
-      const url = await getObjectUrl(TEST_BUCKET, TEST_OBJECT);
+      const url = await getObjectUrl({
+        bucketName: TEST_BUCKET,
+        objectName: TEST_OBJECT
+      });
       expect(url).toContain(TEST_BUCKET);
       expect(url).toContain(TEST_OBJECT);
     });
 
     it('should delete an object', async () => {
-      await expect(deleteObject(TEST_BUCKET, TEST_OBJECT)).resolves.not.toThrow();
-      const exists = await checkObjectExists(TEST_BUCKET, TEST_OBJECT);
+      await expect(deleteObject({
+        bucketName: TEST_BUCKET,
+        objectName: TEST_OBJECT
+      })).resolves.not.toThrow();
+      const exists = await checkObjectExists({
+        bucketName: TEST_BUCKET,
+        objectName: TEST_OBJECT
+      });
       expect(exists).toBe(false);
     });
   });
 
   describe('Error Handling', () => {
     it('should handle non-existent object', async () => {
-      const exists = await checkObjectExists(TEST_BUCKET, 'non-existent.txt');
+      const exists = await checkObjectExists({
+        bucketName: TEST_BUCKET,
+        objectName: 'non-existent.txt'
+      });
       expect(exists).toBe(false);
     });
 
     it('should throw error when downloading non-existent object', async () => {
       await expect(
-        downloadObject(TEST_BUCKET, 'non-existent.txt')
+        downloadObject({
+          bucketName: TEST_BUCKET,
+          objectName: 'non-existent.txt'
+        })
       ).rejects.toThrow();
     });
   });

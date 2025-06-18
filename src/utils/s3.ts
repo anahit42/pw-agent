@@ -24,6 +24,21 @@ const s3Client = new S3Client({
   forcePathStyle: config.s3.useMinio,
 });
 
+export async function createBucketIfNotExists(bucketName: string): Promise<void> {
+  try {
+    const existingBuckets = await listBuckets();
+    if (!existingBuckets.includes(bucketName)) {
+      await createBucket(bucketName);
+      logger.info(`Bucket ${bucketName} created as it did not exist`);
+    } else {
+      logger.info(`Bucket ${bucketName} already exists`);
+    }
+  } catch (error) {
+    logger.error(`Error in createBucketIfNotExists for bucket ${bucketName}:`, error);
+    throw error;
+  }
+}
+
 export async function createBucket(bucketName: string): Promise<void> {
   try {
     await s3Client.send(new CreateBucketCommand({
@@ -46,12 +61,17 @@ export async function listBuckets(): Promise<string[]> {
   }
 }
 
-export async function uploadObject(
+export async function uploadObject({
+    bucketName,
+    objectName,
+    data,
+    contentType,
+}: {
   bucketName: string,
   objectName: string,
   data: Buffer | string,
   contentType?: string
-): Promise<void> {
+}): Promise<void> {
   try {
     await s3Client.send(new PutObjectCommand({
       Bucket: bucketName,
@@ -66,10 +86,10 @@ export async function uploadObject(
   }
 }
 
-export async function downloadObject(
+export async function downloadObject({ bucketName, objectName }: {
   bucketName: string,
   objectName: string
-): Promise<Buffer> {
+}): Promise<Buffer> {
   try {
     const response = await s3Client.send(new GetObjectCommand({
       Bucket: bucketName,
@@ -94,10 +114,10 @@ export async function downloadObject(
   }
 }
 
-export async function deleteObject(
+export async function deleteObject({ bucketName, objectName }: {
   bucketName: string,
   objectName: string
-): Promise<void> {
+}): Promise<void> {
   try {
     await s3Client.send(new DeleteObjectCommand({
       Bucket: bucketName,
@@ -110,10 +130,10 @@ export async function deleteObject(
   }
 }
 
-export async function listObjects(
+export async function listObjects({ bucketName, prefix }: {
   bucketName: string,
   prefix?: string
-): Promise<string[]> {
+}): Promise<string[]> {
   try {
     const response = await s3Client.send(new ListObjectsV2Command({
       Bucket: bucketName,
@@ -127,11 +147,15 @@ export async function listObjects(
   }
 }
 
-export async function getObjectUrl(
+export async function getObjectUrl({
+    bucketName,
+    objectName,
+    expirySeconds = 3600,
+ }: {
   bucketName: string,
   objectName: string,
-  expirySeconds = 3600
-): Promise<string> {
+  expirySeconds?: number
+}): Promise<string> {
   try {
     const command = new GetObjectCommand({
       Bucket: bucketName,
@@ -145,10 +169,13 @@ export async function getObjectUrl(
   }
 }
 
-export async function checkObjectExists(
+export async function checkObjectExists({
+    bucketName,
+    objectName,
+}:  {
   bucketName: string,
   objectName: string
-): Promise<boolean> {
+}): Promise<boolean> {
   try {
     await s3Client.send(new HeadObjectCommand({
       Bucket: bucketName,

@@ -5,6 +5,7 @@ import cors from 'cors';
 import { rateLimiterMiddleware } from './middlewares/rate-limiter';
 import { requestLoggerMiddleware } from './middlewares/request-logger';
 import { finalErrorHandlerMiddleware } from './middlewares/error-handler';
+import { tracesRouter } from './api/traces/routes';
 
 export const app = express();
 
@@ -21,5 +22,8 @@ app.get('/health', (req: Request, res: Response) => {
     version: '1.0.0'
   });
 });
+
+// Mount traces router
+app.use('/api/traces', tracesRouter);
 
 app.use(finalErrorHandlerMiddleware);
