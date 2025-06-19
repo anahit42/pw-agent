@@ -31,7 +31,10 @@ export async function analyzeTraceById(traceFileId: string) {
         summary: parsedResult.summary || '',
         failedStep: parsedResult.failedStep || '',
         errorReason: parsedResult.errorReason || '',
+        networkIssues: parsedResult.networkIssues || '',
+        stackTraceAnalysis: parsedResult.stackTraceAnalysis || '',
         suggestions: parsedResult.suggestions || '',
+        correlatedEvents: parsedResult.correlatedEvents || '',
     });
 }
 

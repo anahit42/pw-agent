@@ -22,6 +22,9 @@ model TraceAnalysis {
   summary     String
   failedStep  String
   errorReason String
+  networkIssues String
+  stackTraceAnalysis String
+  correlatedEvents String
   suggestions String
   analyzedAt  DateTime @default(now())
 }

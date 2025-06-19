@@ -1,11 +1,15 @@
 import { Request, Response } from 'express';
 import { v4 as generateUID } from 'uuid';
 
-import { createBucketIfNotExists, uploadObject } from '../../utils/s3';
+import {
+    createBucketIfNotExists,
+    generateOriginalTraceFilePath,
+    uploadObject
+} from '../../utils/s3';
 import { config } from '../../config';
 import { extractTraceFiles } from '../../utils/file-manager';
 import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById } from './service';
-import {NotFoundError} from "../../utils/custom-errors";
+import { NotFoundError } from '../../utils/custom-errors';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -14,8 +18,8 @@ export async function uploadTrace (req: Request, res: Response) {
 
     const { bucketName } = config.s3;
     const id = generateUID();
-    const objectName = `traces/${id}/original.zip`;
-    const { buffer, mimetype } = req.file;
+    const { buffer, mimetype, filename } = req.file;
+    const objectName = generateOriginalTraceFilePath(id);
 
     await createBucketIfNotExists(bucketName);
 

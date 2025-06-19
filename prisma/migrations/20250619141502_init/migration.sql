@@ -16,8 +16,10 @@ CREATE TABLE "TraceAnalysis" (
     "failedStep" TEXT NOT NULL,
     "errorReason" TEXT NOT NULL,
     "suggestions" TEXT NOT NULL,
+    "networkIssues" TEXT NOT NULL,
+    "stackTraceAnalysis" TEXT NOT NULL,
+    "correlatedEvents" TEXT NOT NULL,
     "analyzedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT "TraceAnalysis_pkey" PRIMARY KEY ("id")
 );
 

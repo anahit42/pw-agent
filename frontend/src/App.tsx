@@ -171,28 +171,34 @@ function App() {
               <div className="analysis-result">
                 <h3>Analyses</h3>
                 {analysisResult && (
-                  <div style={{ marginBottom: 18 }}>
-                    <div><b>Summary:</b> {analysisResult.summary}</div>
-                    <div><b>Failed Step:</b> {analysisResult.failedStep}</div>
-                    <div><b>Error Reason:</b> {analysisResult.errorReason}</div>
-                    <div><b>Suggestions:</b> {analysisResult.suggestions}</div>
-                    <div style={{ fontSize: '0.9em', color: '#888' }}><b>Analyzed At:</b> just now</div>
-                    {((selectedTrace.analyses ?? []).length > 0) && (
-                      <hr style={{ border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0' }} />
-                    )}
-                  </div>
+                    <div style={{marginBottom: 18}}>
+                      <div><b>Summary:</b> {analysisResult.summary}</div>
+                      <div><b>Failed Step:</b> {analysisResult.failedStep}</div>
+                      <div><b>Error Reason:</b> {analysisResult.errorReason}</div>
+                      <div><b>Network Issues:</b> {analysisResult.networkIssues}</div>
+                      <div><b>Stack Analysis:</b> {analysisResult.stackTraceAnalysis}</div>
+                      <div><b>Correlated Events:</b> {analysisResult.correlatedEvents}</div>
+                      <div><b>Suggestions:</b> {analysisResult.suggestions}</div>
+                      <div style={{fontSize: '0.9em', color: '#888'}}><b>Analyzed At:</b> just now</div>
+                      {((selectedTrace.analyses ?? []).length > 0) && (
+                          <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
+                      )}
+                    </div>
                 )}
                 {(selectedTrace.analyses ?? []).map((analysis: any, idx: number) => (
-                  <div key={analysis.id} style={{ marginBottom: 18 }}>
-                    <div><b>Summary:</b> {analysis.summary}</div>
-                    <div><b>Failed Step:</b> {analysis.failedStep}</div>
-                    <div><b>Error Reason:</b> {analysis.errorReason}</div>
-                    <div><b>Suggestions:</b> {analysis.suggestions}</div>
-                    <div style={{ fontSize: '0.9em', color: '#888' }}><b>Analyzed At:</b> {analysis.analyzedAt}</div>
-                    {idx < (selectedTrace.analyses ?? []).length - 1 && (
-                      <hr style={{ border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0' }} />
-                    )}
-                  </div>
+                    <div key={analysis.id} style={{marginBottom: 18}}>
+                      <div><b>Summary:</b> {analysis.summary}</div>
+                      <div><b>Failed Step:</b> {analysis.failedStep}</div>
+                      <div><b>Error Reason:</b> {analysis.errorReason}</div>
+                      <div><b>Network Issues:</b> {analysis.networkIssues}</div>
+                      <div><b>Stack Analysis:</b> {analysis.stackTraceAnalysis}</div>
+                      <div><b>Correlated Events:</b> {analysis.correlatedEvents}</div>
+                      <div><b>Suggestions:</b> {analysis.suggestions}</div>
+                      <div style={{fontSize: '0.9em', color: '#888'}}><b>Analyzed At:</b> {analysis.analyzedAt}</div>
+                      {idx < (selectedTrace.analyses ?? []).length - 1 && (
+                          <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
+                      )}
+                    </div>
                 ))}
               </div>
             )}

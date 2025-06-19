@@ -8,7 +8,7 @@ export const config = {
     apiKey: process.env.OPENAI_API_KEY,
     model: 'gpt-4-turbo-preview',
     maxTokens: 4000,
-    temperature: 0.3
+    temperature: 0.2
   },
 
   s3: {

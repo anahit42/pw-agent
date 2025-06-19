@@ -8,7 +8,16 @@ export async function findTraceFileById(id: string) {
     return prisma.traceFile.findUnique({ where: { id } });
 }
 
-export async function createTraceAnalysis(data: { traceFileId: string; summary: string; failedStep: string; errorReason: string; suggestions: string }) {
+export async function createTraceAnalysis(data: {
+    traceFileId: string;
+    summary: string;
+    failedStep: string;
+    errorReason: string;
+    networkIssues: string;
+    stackTraceAnalysis: string;
+    suggestions: string;
+    correlatedEvents: string;
+}) {
     return prisma.traceAnalysis.create({ data });
 }
 

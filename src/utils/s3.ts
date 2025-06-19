@@ -191,3 +191,19 @@ export async function checkObjectExists({
     throw new AppError(`Failed to check if object exists: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
+export function generateOriginalTraceFilePath(traceFileId: string): string {
+  return `traces/${traceFileId}/original.zip`;
+}
+
+export function generateMainTraceFilePath(traceFileId: string): string {
+  return `traces/${traceFileId}/test.txt`;
+}
+
+export function generateNetworkTraceFilePath(traceFileId: string): string {
+  return `traces/${traceFileId}/network.txt`;
+}
+
+export function generateStackTraceFilePath(traceFileId: string): string {
+  return `traces/${traceFileId}/stacks.txt`;
+}
