@@ -20,5 +20,5 @@ const upload = multer({
 });
 
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
-tracesRouter.post('/:traceId/analyze', analyzeTrace);
+tracesRouter.post('/:id/analyze', analyzeTrace);
 

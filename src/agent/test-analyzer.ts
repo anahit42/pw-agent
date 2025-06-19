@@ -76,24 +76,33 @@ const workflow = new StateGraph(GraphState)
 
 const graph = workflow.compile({ checkpointer: memory });
 
-export async function analyzeTraceFile(traceId: string) {
-    logger.info(`Analyze PW test trace, traceId: ${traceId}`);
+export async function analyzeTraceFile(traceFileId: string) {
+    logger.info(`Analyze PW test trace, traceFileId: ${traceFileId}`);
 
     const finalState = await graph.invoke(
         {
             messages: [
                 new HumanMessage({
-                    content: `You are a debugging assistant for Playwright tests. Analyze the contents of Playwright trace files and identify the cause of the test failure. Provide:
-1. A high-level summary of what the test is doing.
-2. The specific step where the test failed.
-3. The reason for the failure based on logs, network, or UI actions.
-4. Any useful suggestions for fixing the test.
+                    content: `You are a debugging assistant for Playwright tests.
 
-Main trace file key is "traces/${traceId}/test.txt".`
+Analyze the contents of Playwright trace files and identify the cause of the test failure.
+
+**Important:** Return only a raw, parsable JSON string — without markdown, backticks, escape sequences, or commentary. The output must be exactly like this format:
+
+{
+  "summary": "...",
+  "failedStep": "...",
+  "errorReason": "...",
+  "suggestions": "..."
+}
+
+Do not include \` characters, \\\\n, or any extra explanation.
+
+Main trace file key: "traces/${traceFileId}/test.txt"`
                 })
             ],
         },
-        { recursionLimit: 10, configurable: { thread_id: traceId } }
+        { recursionLimit: 10, configurable: { thread_id: traceFileId } }
     );
 
     return finalState.messages[finalState.messages.length - 1].content;

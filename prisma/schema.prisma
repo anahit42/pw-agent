@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TraceFile {
+  id         String   @id @default(uuid())
+  bucketName String
+  originalZipPath String
+  uploadedAt DateTime @default(now())
+  analyses   TraceAnalysis[]
+}
+
+model TraceAnalysis {
+  id          String   @id @default(uuid())
+  traceFile   TraceFile @relation(fields: [traceFileId], references: [id])
+  traceFileId String
+  summary     String
+  failedStep  String
+  errorReason String
+  suggestions String
+  analyzedAt  DateTime @default(now())
+}

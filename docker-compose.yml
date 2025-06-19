@@ -21,8 +21,25 @@ services:
     networks:
       - pw-network
 
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+      POSTGRES_DB: pwdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - pw-network
+
 volumes:
   minio_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:
