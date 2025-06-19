@@ -54,13 +54,23 @@ npx prisma migrate dev
 npx prisma generate
 ```
 
-### 6. Start the application
+### 6. Start the backend
 
 ```bash
 npm run dev
 ```
 
 The server will start at [http://localhost:3000](http://localhost:3000).
+
+### 7. Start the frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+The UI will start at [http://localhost:5173](http://localhost:5173).
+
 
 ## Scripts
 
