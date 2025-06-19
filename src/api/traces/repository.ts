@@ -12,8 +12,16 @@ export async function createTraceAnalysis(data: { traceFileId: string; summary: 
     return prisma.traceAnalysis.create({ data });
 }
 
-export async function listTraceFiles() {
+export async function listTraceFiles({ page, limit }: { page: number; limit: number }) {
+    const skip = (page - 1) * limit;
+    const take = limit;
     return prisma.traceFile.findMany({
-        orderBy: { uploadedAt: 'desc' }
+        orderBy: { uploadedAt: 'desc' },
+        skip,
+        take,
     });
+}
+
+export async function countTraceFiles() {
+    return prisma.traceFile.count();
 }

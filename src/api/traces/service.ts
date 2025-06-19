@@ -1,4 +1,4 @@
-import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles } from './repository';
+import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles } from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
 import { AppError, BadRequestError } from '../../utils/custom-errors';
 
@@ -35,6 +35,10 @@ export async function analyzeTraceById(traceFileId: string) {
     });
 }
 
-export async function getAllTraceFiles() {
-    return listTraceFiles();
+export async function getAllTraceFiles({ page = 1, limit = 50 }: { page?: number; limit?: number }) {
+    const [traces, total] = await Promise.all([
+        listTraceFiles({ page, limit }),
+        countTraceFiles(),
+    ]);
+    return { traces, total };
 }

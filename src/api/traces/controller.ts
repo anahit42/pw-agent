@@ -71,6 +71,15 @@ export async function analyzeTrace (req: Request, res: Response) {
 }
 
 export async function listTraces(req: Request, res: Response) {
-    const traces = await getAllTraceFiles();
-    return res.status(200).json(traces);
+    const page = (req.query as any).page;
+    const limit = (req.query as any).limit;
+    const { traces, total } = await getAllTraceFiles({ page, limit });
+    const totalPages = Math.ceil(total / limit);
+    return res.status(200).json({
+        traces,
+        total,
+        page,
+        limit,
+        totalPages,
+    });
 }
