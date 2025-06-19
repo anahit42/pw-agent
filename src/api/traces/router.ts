@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 
-import { analyzeTrace, uploadTrace } from './controllers';
+import { analyzeTrace, uploadTrace } from './controller';
 
 export const tracesRouter = Router();
 

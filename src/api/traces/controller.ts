@@ -3,9 +3,8 @@ import { v4 as generateUID } from 'uuid';
 
 import { createBucketIfNotExists, uploadObject } from '../../utils/s3';
 import { config } from '../../config';
-import { analyzeTraceFile } from '../../agent/test-analyzer';
 import { extractTraceFiles } from '../../utils/file-manager';
-import { prisma } from '../../utils/db';
+import { uploadTraceFile, getTraceFileById, analyzeTraceById } from './service';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -41,13 +40,11 @@ export async function uploadTrace (req: Request, res: Response) {
         });
     }
 
-    // Store trace file metadata in the database
-    const traceFile = await prisma.traceFile.create({
-        data: {
-            id,
-            bucketName,
-            originalZipPath: objectName,
-        },
+    // Store trace file metadata in the database via service
+    const traceFile = await uploadTraceFile({
+        id,
+        bucketName,
+        originalZipPath: objectName,
     });
 
     return res.status(200).json({
@@ -61,36 +58,19 @@ export async function uploadTrace (req: Request, res: Response) {
 export async function analyzeTrace (req: Request, res: Response) {
     const { id } = req.params;
 
-    // Find the trace file in the database
-    const traceFile = await prisma.traceFile.findUnique({ where: { id } });
+    // Use service to get and analyze trace file
+    const traceFile = await getTraceFileById(id);
     if (!traceFile) {
         return res.status(404).json({ error: 'Trace file not found in database' });
     }
 
-    const result = await analyzeTraceFile(traceFile.id);
-
-    // Parse the result as JSON (assuming analyzeTraceFile returns a JSON string)
-    let parsedResult;
-
     try {
-        parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-    } catch (e) {
-        return res.status(500).json({ error: 'Failed to parse analysis result', result });
+        const analysis = await analyzeTraceById(traceFile.id);
+        return res.status(200).json({
+            message: 'Trace file analyzed successfully',
+            result: analysis,
+        });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message || 'Failed to analyze trace file' });
     }
-
-    // Store analysis result in the database
-    const analysis = await prisma.traceAnalysis.create({
-        data: {
-            traceFileId: traceFile.id,
-            summary: parsedResult.summary || '',
-            failedStep: parsedResult.failedStep || '',
-            errorReason: parsedResult.errorReason || '',
-            suggestions: parsedResult.suggestions || '',
-        },
-    });
-
-    return res.status(200).json({
-        message: 'Trace file analyzed successfully',
-        result: analysis,
-    });
 }

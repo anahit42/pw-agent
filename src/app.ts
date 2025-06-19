@@ -5,7 +5,7 @@ import cors from 'cors';
 import { rateLimiterMiddleware } from './middlewares/rate-limiter';
 import { requestLoggerMiddleware } from './middlewares/request-logger';
 import { finalErrorHandlerMiddleware } from './middlewares/error-handler';
-import { tracesRouter } from './api/traces/routes';
+import { tracesRouter } from './api/traces/router';
 
 export const app = express();
 
@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(rateLimiterMiddleware);
 app.use(requestLoggerMiddleware);
 
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -23,7 +23,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Mount traces router
 app.use('/api/traces', tracesRouter);
 
 app.use(finalErrorHandlerMiddleware);
