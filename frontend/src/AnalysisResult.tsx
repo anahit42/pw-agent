@@ -16,14 +16,6 @@ export interface Analysis {
   analyzedAt?: string;
 }
 
-const labelStyle: React.CSSProperties = {
-  fontWeight: 600,
-  color: '#b0bad6',
-  minWidth: 130,
-  display: 'inline-block',
-  verticalAlign: 'top',
-};
-
 const valueStyle: React.CSSProperties = {
   color: '#e0e6f0',
   marginLeft: 8,
