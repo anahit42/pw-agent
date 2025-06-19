@@ -9,7 +9,7 @@ datasource db {
 
 model TraceFile {
   id         String   @id @default(uuid())
-  bucketName String
+  originalFileName String
   originalZipPath String
   uploadedAt DateTime @default(now())
   analyses   TraceAnalysis[]

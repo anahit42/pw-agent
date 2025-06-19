@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "TraceFile" (
     "id" TEXT NOT NULL,
-    "bucketName" TEXT NOT NULL,
+    "originalFileName" TEXT NOT NULL,
     "originalZipPath" TEXT NOT NULL,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

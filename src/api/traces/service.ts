@@ -2,8 +2,8 @@ import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles
 import { analyzeTraceFile } from '../../agent/test-analyzer';
 import { BadRequestError } from '../../utils/custom-errors';
 
-export async function uploadTraceFile({ id, bucketName, originalZipPath }: { id: string; bucketName: string; originalZipPath: string }) {
-    return createTraceFile({ id, bucketName, originalZipPath });
+export async function uploadTraceFile({ id, originalFileName, originalZipPath }: { id: string; originalFileName: string; originalZipPath: string }) {
+    return createTraceFile({ id, originalFileName, originalZipPath });
 }
 
 export async function getTraceFileById(id: string) {

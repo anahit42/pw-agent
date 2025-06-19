@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
+import AnalysisResult, { type Analysis } from './AnalysisResult';
 
 interface TraceFile {
   id: string;
-  bucketName: string;
+  originalFileName: string;
   originalZipPath: string;
   uploadedAt?: string;
 }
@@ -17,7 +18,7 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<Analysis | null>(null);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [selectedTrace, setSelectedTrace] = useState<any>(null);
 
@@ -144,7 +145,7 @@ function App() {
                 fetchTraceDetails(trace.id);
               }}
             >
-              <span role="img" aria-label="file">📄</span> {trace.id.slice(0, 8)}
+              <span role="img" aria-label="file">📄</span> {trace.originalFileName}
             </li>
           ))}
         </ul>
@@ -158,7 +159,7 @@ function App() {
           <section className="trace-details">
             <h2>Trace Details</h2>
             <div><b>ID:</b> {selectedTrace.id}</div>
-            <div><b>Bucket:</b> {selectedTrace.bucketName}</div>
+            <div><b>File Name:</b> {selectedTrace.originalFileName}</div>
             <div><b>Path:</b> {selectedTrace.originalZipPath}</div>
             <button
               className="analyze-btn"
@@ -171,34 +172,20 @@ function App() {
               <div className="analysis-result">
                 <h3>Analyses</h3>
                 {analysisResult && (
-                    <div style={{marginBottom: 18}}>
-                      <div><b>Summary:</b> {analysisResult.analysisJson?.summary}</div>
-                      <div><b>Failed Step:</b> {analysisResult.analysisJson?.failedStep}</div>
-                      <div><b>Error Reason:</b> {analysisResult.analysisJson?.errorReason}</div>
-                      <div><b>Network Issues:</b> {analysisResult.analysisJson?.networkIssues}</div>
-                      <div><b>Stack Analysis:</b> {analysisResult.analysisJson?.stackTraceAnalysis}</div>
-                      <div><b>Correlated Events:</b> {analysisResult.analysisJson?.correlatedEvents}</div>
-                      <div><b>Suggestions:</b> {analysisResult.analysisJson?.suggestions}</div>
-                      <div style={{fontSize: '0.9em', color: '#888'}}><b>Analyzed At:</b> just now</div>
+                    <>
+                      <AnalysisResult analysis={analysisResult} analyzedAt="just now" />
                       {((selectedTrace.analyses ?? []).length > 0) && (
                           <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
                       )}
-                    </div>
+                    </>
                 )}
-                {(selectedTrace.analyses ?? []).map((analysis: any, idx: number) => (
-                    <div key={analysis.id} style={{marginBottom: 18}}>
-                      <div><b>Summary:</b> {analysis.analysisJson?.summary}</div>
-                      <div><b>Failed Step:</b> {analysis.analysisJson?.failedStep}</div>
-                      <div><b>Error Reason:</b> {analysis.analysisJson?.errorReason}</div>
-                      <div><b>Network Issues:</b> {analysis.analysisJson?.networkIssues}</div>
-                      <div><b>Stack Analysis:</b> {analysis.analysisJson?.stackTraceAnalysis}</div>
-                      <div><b>Correlated Events:</b> {analysis.analysisJson?.correlatedEvents}</div>
-                      <div><b>Suggestions:</b> {analysis.analysisJson?.suggestions}</div>
-                      <div style={{fontSize: '0.9em', color: '#888'}}><b>Analyzed At:</b> {analysis.analyzedAt}</div>
+                {(selectedTrace.analyses ?? []).map((analysis: Analysis, idx: number) => (
+                    <React.Fragment key={analysis.id}>
+                      <AnalysisResult analysis={analysis} analyzedAt={analysis.analyzedAt ?? ''} />
                       {idx < (selectedTrace.analyses ?? []).length - 1 && (
                           <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
                       )}
-                    </div>
+                    </React.Fragment>
                 ))}
               </div>
             )}

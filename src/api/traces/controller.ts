@@ -18,7 +18,7 @@ export async function uploadTrace (req: Request, res: Response) {
 
     const { bucketName } = config.s3;
     const id = generateUID();
-    const { buffer, mimetype, filename } = req.file;
+    const { buffer, mimetype, originalname } = req.file;
     const objectName = generateOriginalTraceFilePath(id);
 
     await createBucketIfNotExists(bucketName);
@@ -47,7 +47,7 @@ export async function uploadTrace (req: Request, res: Response) {
 
     const traceFile = await uploadTraceFile({
         id,
-        bucketName,
+        originalFileName: originalname,
         originalZipPath: objectName,
     });
 
