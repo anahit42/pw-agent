@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import { logger } from '../utils/logger';
+import { AppError } from '../utils/custom-errors';
 
 export function finalErrorHandlerMiddleware (err: Error, req: Request, res: Response, next: NextFunction) {
     logger.error('Unhandled error:', {
@@ -10,9 +11,12 @@ export function finalErrorHandlerMiddleware (err: Error, req: Request, res: Resp
         method: req.method
     });
 
-    return res.status(500).json({
+    const statusCode = err instanceof AppError ? err.statusCode : 500;
+    const message = err instanceof AppError ? err.message : 'Internal server error';
+
+    return res.status(statusCode).json({
         success: false,
-        error: 'Internal server error',
+        error: message,
         metadata: {
             timestamp: new Date().toISOString(),
             errorType: err.name,

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { downloadObject } from '../utils/s3';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { AppError } from '../utils/custom-errors';
 
 export const getMainTraceFile = tool(async ({ mainTraceFileKey }) => {
     try {
@@ -16,7 +17,7 @@ export const getMainTraceFile = tool(async ({ mainTraceFileKey }) => {
         return contentBuffer.toString('utf-8');
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        throw new Error(`Failed to download file from S3: ${errorMessage}`);
+        throw new AppError(`Failed to download file from S3: ${errorMessage}`, 500);
     }
 }, {
     name: 'get_main_trace_file',

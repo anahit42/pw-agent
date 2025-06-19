@@ -11,3 +11,9 @@ export async function findTraceFileById(id: string) {
 export async function createTraceAnalysis(data: { traceFileId: string; summary: string; failedStep: string; errorReason: string; suggestions: string }) {
     return prisma.traceAnalysis.create({ data });
 }
+
+export async function listTraceFiles() {
+    return prisma.traceFile.findMany({
+        orderBy: { uploadedAt: 'desc' }
+    });
+}

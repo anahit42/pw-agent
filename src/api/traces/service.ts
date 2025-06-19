@@ -1,5 +1,6 @@
-import { createTraceFile, findTraceFileById, createTraceAnalysis } from './repository';
+import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles } from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
+import { AppError, BadRequestError } from '../../utils/custom-errors';
 
 export async function uploadTraceFile({ id, bucketName, originalZipPath }: { id: string; bucketName: string; originalZipPath: string }) {
     return createTraceFile({ id, bucketName, originalZipPath });
@@ -22,7 +23,7 @@ export async function analyzeTraceById(traceFileId: string) {
     try {
         parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
     } catch (e) {
-        throw new Error('Failed to parse analysis result');
+        throw new BadRequestError('Failed to parse analysis result');
     }
 
     return createTraceAnalysis({
@@ -32,4 +33,8 @@ export async function analyzeTraceById(traceFileId: string) {
         errorReason: parsedResult.errorReason || '',
         suggestions: parsedResult.suggestions || '',
     });
+}
+
+export async function getAllTraceFiles() {
+    return listTraceFiles();
 }

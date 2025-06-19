@@ -13,6 +13,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from '../config';
 import { logger } from './logger';
+import { AppError, NotFoundError } from './custom-errors';
 
 const s3Client = new S3Client({
   endpoint: config.s3.endpoint,
@@ -47,7 +48,7 @@ export async function createBucket(bucketName: string): Promise<void> {
     logger.info(`Bucket ${bucketName} created successfully`);
   } catch (error) {
     logger.error(`Error creating bucket ${bucketName}:`, error);
-    throw error;
+    throw new AppError(`Failed to create bucket: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -57,7 +58,7 @@ export async function listBuckets(): Promise<string[]> {
     return response.Buckets?.map((bucket: Bucket) => bucket.Name || '') || [];
   } catch (error) {
     logger.error('Error listing buckets:', error);
-    throw error;
+    throw new AppError(`Failed to list buckets: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -83,7 +84,7 @@ export async function uploadObject({
     logger.info(`Object ${objectName} uploaded successfully to bucket ${bucketName}`);
   } catch (error) {
     logger.error(`Error uploading object ${objectName}:`, error);
-    throw error;
+    throw new AppError(`Failed to upload object: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -98,7 +99,7 @@ export async function downloadObject({ bucketName, objectName }: {
     }));
 
     if (!response.Body) {
-      throw new Error('Empty response body');
+      throw new NotFoundError('Empty response body');
     }
 
     const chunks: Uint8Array[] = [];
@@ -111,7 +112,7 @@ export async function downloadObject({ bucketName, objectName }: {
     });
   } catch (error) {
     logger.error(`Error downloading object ${objectName}:`, error);
-    throw error;
+    throw new AppError(`Failed to download object: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -127,7 +128,7 @@ export async function deleteObject({ bucketName, objectName }: {
     logger.info(`Object ${objectName} deleted successfully from bucket ${bucketName}`);
   } catch (error) {
     logger.error(`Error deleting object ${objectName}:`, error);
-    throw error;
+    throw new AppError(`Failed to delete object: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -144,7 +145,7 @@ export async function listObjects({ bucketName, prefix }: {
     return response.Contents?.map((object: _Object) => object.Key || '') || [];
   } catch (error) {
     logger.error(`Error listing objects in bucket ${bucketName}:`, error);
-    throw error;
+    throw new AppError(`Failed to list objects: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -166,7 +167,7 @@ export async function getObjectUrl({
     return await getSignedUrl(s3Client, command, { expiresIn: expirySeconds });
   } catch (error) {
     logger.error(`Error generating URL for object ${objectName}:`, error);
-    throw error;
+    throw new AppError(`Failed to generate object URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -187,6 +188,6 @@ export async function checkObjectExists({
     if ((error as any).name === 'NotFound') {
       return false;
     }
-    throw error;
+    throw new AppError(`Failed to check if object exists: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

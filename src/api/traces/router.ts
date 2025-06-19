@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 
-import { analyzeTrace, uploadTrace } from './controller';
+import { analyzeTrace, uploadTrace, listTraces } from './controller';
+import { BadRequestError } from '../../utils/custom-errors';
 
 export const tracesRouter = Router();
 
@@ -11,7 +12,7 @@ const upload = multer({
         if (file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed') {
             cb(null, true);
         } else {
-            cb(new Error('Only .zip files are allowed'));
+            cb(new BadRequestError('Only .zip files are allowed'));
         }
     },
     limits: {
@@ -19,6 +20,7 @@ const upload = multer({
     }
 });
 
+tracesRouter.get('/', listTraces);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 tracesRouter.post('/:id/analyze', analyzeTrace);
 

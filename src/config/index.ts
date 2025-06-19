@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { AppError } from '../utils/custom-errors';
 
 dotenv.config();
 
@@ -32,5 +33,5 @@ export const config = {
 };
 
 if (!config.openai.apiKey) {
-  throw new Error('OPENAI_API_KEY environment variable is required');
+  throw new AppError('OPENAI_API_KEY environment variable is required', 500);
 }
