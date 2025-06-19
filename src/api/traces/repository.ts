@@ -25,3 +25,14 @@ export async function listTraceFiles({ page, limit }: { page: number; limit: num
 export async function countTraceFiles() {
     return prisma.traceFile.count();
 }
+
+export async function findTraceFileWithAnalysesById(id: string) {
+    return prisma.traceFile.findUnique({
+        where: { id },
+        include: {
+            analyses: {
+                orderBy: { analyzedAt: 'desc' }
+            }
+        }
+    });
+}

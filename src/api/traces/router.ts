@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 
-import { analyzeTrace, uploadTrace, listTraces } from './controller';
+import { analyzeTrace, uploadTrace, listTraces, getTraceWithAnalyses } from './controller';
 import { BadRequestError } from '../../utils/custom-errors';
 import { paginationMiddleware } from '../../middlewares/pagination';
 
@@ -23,5 +23,6 @@ const upload = multer({
 
 tracesRouter.get('/', paginationMiddleware, listTraces);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
+tracesRouter.get('/:id', getTraceWithAnalyses);
 tracesRouter.post('/:id/analyze', analyzeTrace);
 

@@ -19,6 +19,7 @@ function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [selectedTrace, setSelectedTrace] = useState<any>(null);
 
   const fetchTraces = async () => {
     try {
@@ -34,10 +35,32 @@ function App() {
     }
   };
 
+  const fetchTraceDetails = async (id: string) => {
+    try {
+      setError(null);
+      const res = await fetch(`${API_BASE}/${id}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch trace details');
+      }
+      const data = await res.json();
+      setSelectedTrace(data);
+    } catch (err: any) {
+      setError(err.message);
+      setSelectedTrace(null);
+    }
+  };
+
   useEffect(() => {
     fetchTraces();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    if (selectedTraceId) {
+      fetchTraceDetails(selectedTraceId);
+    }
+    // eslint-disable-next-line
+  }, [selectedTraceId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -90,8 +113,6 @@ function App() {
     }
   };
 
-  const selectedTrace = traceFiles.find((t) => t.id === selectedTraceId);
-
   return (
     <div className="chatgpt-layout">
       <aside className="sidebar">
@@ -120,6 +141,7 @@ function App() {
                 setSelectedTraceId(trace.id);
                 setAnalysisResult(null);
                 setError(null);
+                fetchTraceDetails(trace.id);
               }}
             >
               <span role="img" aria-label="file">📄</span> {trace.id.slice(0, 8)}
@@ -128,9 +150,9 @@ function App() {
         </ul>
       </aside>
       <main className="main-content">
-        <header className="main-header">
-          <h1>Trace File Manager</h1>
-        </header>
+        <div className="product-description" style={{ marginBottom: 24, color: '#b0bad6', fontSize: '1.1em' }}>
+          <b>AI-powered Playwright trace analyzer:</b> Upload, analyze, and debug your Playwright test traces with ease.
+        </div>
         {error && <div className="error">{error}</div>}
         {selectedTrace ? (
           <section className="trace-details">
@@ -145,8 +167,34 @@ function App() {
             >
               {analyzing ? 'Analyzing...' : 'Analyze'}
             </button>
-            {analysisResult && (
-              <pre className="analysis-result">{JSON.stringify(analysisResult, null, 2)}</pre>
+            {(analysisResult || (selectedTrace.analyses ?? []).length > 0) && (
+              <div className="analysis-result">
+                <h3>Analyses</h3>
+                {analysisResult && (
+                  <div style={{ marginBottom: 18 }}>
+                    <div><b>Summary:</b> {analysisResult.summary}</div>
+                    <div><b>Failed Step:</b> {analysisResult.failedStep}</div>
+                    <div><b>Error Reason:</b> {analysisResult.errorReason}</div>
+                    <div><b>Suggestions:</b> {analysisResult.suggestions}</div>
+                    <div style={{ fontSize: '0.9em', color: '#888' }}><b>Analyzed At:</b> just now</div>
+                    {((selectedTrace.analyses ?? []).length > 0) && (
+                      <hr style={{ border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0' }} />
+                    )}
+                  </div>
+                )}
+                {(selectedTrace.analyses ?? []).map((analysis: any, idx: number) => (
+                  <div key={analysis.id} style={{ marginBottom: 18 }}>
+                    <div><b>Summary:</b> {analysis.summary}</div>
+                    <div><b>Failed Step:</b> {analysis.failedStep}</div>
+                    <div><b>Error Reason:</b> {analysis.errorReason}</div>
+                    <div><b>Suggestions:</b> {analysis.suggestions}</div>
+                    <div style={{ fontSize: '0.9em', color: '#888' }}><b>Analyzed At:</b> {analysis.analyzedAt}</div>
+                    {idx < (selectedTrace.analyses ?? []).length - 1 && (
+                      <hr style={{ border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </section>
         ) : (

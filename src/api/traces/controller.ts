@@ -4,7 +4,8 @@ import { v4 as generateUID } from 'uuid';
 import { createBucketIfNotExists, uploadObject } from '../../utils/s3';
 import { config } from '../../config';
 import { extractTraceFiles } from '../../utils/file-manager';
-import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles } from './service';
+import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById } from './service';
+import {NotFoundError} from "../../utils/custom-errors";
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -64,6 +65,7 @@ export async function analyzeTrace (req: Request, res: Response) {
     }
 
     const analysis = await analyzeTraceById(traceFile.id);
+
     return res.status(200).json({
         message: 'Trace file analyzed successfully',
         result: analysis,
@@ -75,6 +77,7 @@ export async function listTraces(req: Request, res: Response) {
     const limit = (req.query as any).limit;
     const { traces, total } = await getAllTraceFiles({ page, limit });
     const totalPages = Math.ceil(total / limit);
+
     return res.status(200).json({
         traces,
         total,
@@ -82,4 +85,15 @@ export async function listTraces(req: Request, res: Response) {
         limit,
         totalPages,
     });
+}
+
+export async function getTraceWithAnalyses(req: Request, res: Response) {
+    const { id } = req.params;
+    const traceFile = await getTraceFileWithAnalysesById(id);
+
+    if (!traceFile) {
+        throw new NotFoundError('Trace file not found');
+    }
+
+    return res.status(200).json(traceFile);
 }

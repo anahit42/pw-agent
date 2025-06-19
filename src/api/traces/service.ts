@@ -1,6 +1,6 @@
-import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles } from './repository';
+import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles, findTraceFileWithAnalysesById } from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
-import { AppError, BadRequestError } from '../../utils/custom-errors';
+import { BadRequestError } from '../../utils/custom-errors';
 
 export async function uploadTraceFile({ id, bucketName, originalZipPath }: { id: string; bucketName: string; originalZipPath: string }) {
     return createTraceFile({ id, bucketName, originalZipPath });
@@ -41,4 +41,8 @@ export async function getAllTraceFiles({ page = 1, limit = 50 }: { page?: number
         countTraceFiles(),
     ]);
     return { traces, total };
+}
+
+export async function getTraceFileWithAnalysesById(id: string) {
+    return findTraceFileWithAnalysesById(id);
 }
