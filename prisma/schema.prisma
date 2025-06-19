@@ -19,12 +19,6 @@ model TraceAnalysis {
   id          String   @id @default(uuid())
   traceFile   TraceFile @relation(fields: [traceFileId], references: [id])
   traceFileId String
-  summary     String
-  failedStep  String
-  errorReason String
-  networkIssues String
-  stackTraceAnalysis String
-  correlatedEvents String
-  suggestions String
+  analysisJson Json
   analyzedAt  DateTime @default(now())
 }

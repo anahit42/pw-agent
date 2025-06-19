@@ -28,13 +28,7 @@ export async function analyzeTraceById(traceFileId: string) {
 
     return createTraceAnalysis({
         traceFileId: traceFile.id,
-        summary: parsedResult.summary || '',
-        failedStep: parsedResult.failedStep || '',
-        errorReason: parsedResult.errorReason || '',
-        networkIssues: parsedResult.networkIssues || '',
-        stackTraceAnalysis: parsedResult.stackTraceAnalysis || '',
-        suggestions: parsedResult.suggestions || '',
-        correlatedEvents: parsedResult.correlatedEvents || '',
+        analysisJson: parsedResult,
     });
 }
 

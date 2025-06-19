@@ -10,13 +10,8 @@ export async function findTraceFileById(id: string) {
 
 export async function createTraceAnalysis(data: {
     traceFileId: string;
-    summary: string;
-    failedStep: string;
-    errorReason: string;
-    networkIssues: string;
-    stackTraceAnalysis: string;
-    suggestions: string;
-    correlatedEvents: string;
+    analysisJson: any;
+    analyzedAt?: Date;
 }) {
     return prisma.traceAnalysis.create({ data });
 }
