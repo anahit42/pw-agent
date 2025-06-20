@@ -241,8 +241,16 @@ html, body, #root {
   display: flex;
   align-items: center;
 }
-.ready-icon {
-  color: #66bb6a;
+.analyzed-badge {
+  background: #3a4256;
+  color: #7ecfff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border: 1px solid #4a5568;
 }
 
 .sidebar-empty {

@@ -318,7 +318,7 @@ function App() {
                   </div>
                   {getTraceStatus(trace) === 'READY' && (
                     <div className="trace-item-status">
-                      <svg className="ready-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2l4 -4" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="10" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <span className="analyzed-badge">Analyzed</span>
                     </div>
                   )}
                 </li>
