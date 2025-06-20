@@ -25,6 +25,6 @@ const upload = multer({
 tracesRouter.get('/', paginationMiddleware, listTraces);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 tracesRouter.get('/:id', getTraceWithAnalyses);
-tracesRouter.post('/:id/analyze', analyzeRateLimiterMiddleware, analyzeTrace);
 tracesRouter.delete('/:id', deleteTrace);
+tracesRouter.post('/:id/analyze', analyzeRateLimiterMiddleware, analyzeTrace);
 

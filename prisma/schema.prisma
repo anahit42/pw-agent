@@ -17,7 +17,7 @@ model TraceFile {
 
 model TraceAnalysis {
   id          String   @id @default(uuid())
-  traceFile   TraceFile @relation(fields: [traceFileId], references: [id])
+  traceFile   TraceFile @relation(fields: [traceFileId], references: [id], onDelete: Cascade)
   traceFileId String
   analysisJson Json
   analyzedAt  DateTime @default(now())
