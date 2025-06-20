@@ -4,6 +4,7 @@ import multer, { FileFilterCallback } from 'multer';
 import { analyzeTrace, uploadTrace, listTraces, getTraceWithAnalyses } from './controller';
 import { BadRequestError } from '../../utils/custom-errors';
 import { paginationMiddleware } from '../../middlewares/pagination';
+import { analyzeRateLimiterMiddleware } from '../../middlewares/rate-limiter';
 
 export const tracesRouter = Router();
 
@@ -24,5 +25,5 @@ const upload = multer({
 tracesRouter.get('/', paginationMiddleware, listTraces);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 tracesRouter.get('/:id', getTraceWithAnalyses);
-tracesRouter.post('/:id/analyze', analyzeTrace);
+tracesRouter.post('/:id/analyze', analyzeRateLimiterMiddleware, analyzeTrace);
 

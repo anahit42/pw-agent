@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
 import AnalysisResult, { type Analysis } from './AnalysisResult';
@@ -8,6 +8,16 @@ interface TraceFile {
   originalFileName: string;
   originalZipPath: string;
   uploadedAt?: string;
+  size?: number;
+  _count?: {
+    analyses: number;
+  };
+}
+
+interface DateGroup {
+  date: string;
+  label: string;
+  traces: TraceFile[];
 }
 
 const API_BASE = '/api/traces';
@@ -21,6 +31,62 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState<Analysis | null>(null);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [selectedTrace, setSelectedTrace] = useState<any>(null);
+  const [showUploadLoader, setShowUploadLoader] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
+    const groups: { [key: string]: TraceFile[] } = {};
+    
+    traces.forEach(trace => {
+      const date = trace.uploadedAt ? new Date(trace.uploadedAt) : new Date();
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let groupKey: string;
+      let label: string;
+      
+      if (date.toDateString() === today.toDateString()) {
+        groupKey = 'today';
+        label = 'Today';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        groupKey = 'yesterday';
+        label = 'Yesterday';
+      } else if (date.getTime() > today.getTime() - 7 * 24 * 60 * 60 * 1000) {
+        groupKey = 'this-week';
+        label = 'This week';
+      } else if (date.getTime() > today.getTime() - 30 * 24 * 60 * 60 * 1000) {
+        groupKey = 'this-month';
+        label = 'This month';
+      } else {
+        groupKey = 'older';
+        label = 'Older';
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(trace);
+    });
+    
+    // Convert to array and sort by date
+    const groupOrder = ['today', 'yesterday', 'this-week', 'this-month', 'older'];
+    return groupOrder
+      .filter(key => groups[key] && groups[key].length > 0)
+      .map(key => ({
+        date: key,
+        label: key === 'today' ? 'Today' : 
+               key === 'yesterday' ? 'Yesterday' : 
+               key === 'this-week' ? 'This week' : 
+               key === 'this-month' ? 'This month' : 'Older',
+        traces: groups[key].sort((a, b) => {
+          const dateA = a.uploadedAt ? new Date(a.uploadedAt) : new Date(0);
+          const dateB = b.uploadedAt ? new Date(b.uploadedAt) : new Date(0);
+          return dateB.getTime() - dateA.getTime(); // Most recent first
+        })
+      }));
+  };
 
   const fetchTraces = async () => {
     try {
@@ -69,12 +135,23 @@ function App() {
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const handleUpload = async (e: FormEvent) => {
     e.preventDefault();
     if (!file) return;
     setUploading(true);
     setError(null);
+    setShowUploadLoader(false);
+    let loaderTimeout: NodeJS.Timeout | undefined;
     try {
+      loaderTimeout = setTimeout(() => setShowUploadLoader(true), 400);
       const formData = new FormData();
       formData.append('trace', file);
       const res = await fetch(`${API_BASE}/upload`, {
@@ -85,12 +162,17 @@ function App() {
         const errData = await res.json();
         throw new Error(errData.error || 'Upload failed');
       }
+      const { trace: newTrace } = await res.json();
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       await fetchTraces();
+      setSelectedTraceId(newTrace.id);
     } catch (err: any) {
       setError(err.message);
     } finally {
+      if (loaderTimeout) clearTimeout(loaderTimeout);
       setUploading(false);
+      setShowUploadLoader(false);
     }
   };
 
@@ -114,6 +196,34 @@ function App() {
     }
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const getTraceStatus = (trace: TraceFile): 'READY' | null => {
+    return trace._count && trace._count.analyses > 0 ? 'READY' : null;
+  };
+
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="chatgpt-layout">
       <aside className="sidebar">
@@ -126,27 +236,94 @@ function App() {
             </svg>
           </span> <b>Traces</b>
         </div>
-        <form onSubmit={handleUpload} className="upload-form sidebar-upload-form">
-          <input type="file" accept=".zip" onChange={handleFileChange} />
-          <button type="submit" disabled={uploading || !file}>
-            {uploading ? 'Uploading...' : 'Upload'}
-          </button>
+
+        <form 
+          onSubmit={handleUpload} 
+          className={`sidebar-upload-form`}
+        >
+          <div 
+            className={`file-drop-area ${isDragOver ? 'drag-over' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept=".zip" 
+              onChange={handleFileChange}
+              disabled={uploading}
+              className="file-input"
+            />
+            
+            {showUploadLoader ? (
+              <div className="sidebar-upload-progress">
+                <span className="spinner-small"></span>
+                <span>Uploading...</span>
+              </div>
+            ) : (
+              <>
+                <div className="upload-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                {file ? (
+                  <>
+                    <div className="upload-text">{file.name}</div>
+                    <div className="upload-hint">{formatFileSize(file.size)}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="upload-text">Drop trace files here</div>
+                    <div className="upload-subtext">or click to browse</div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          {file && !uploading && (
+            <button type="submit" className="sidebar-upload-btn">
+              Upload
+            </button>
+          )}
         </form>
+
+        <div className="recent-traces-header">
+          <h4>Recent Traces</h4>
+          <span className="trace-count-badge">{traceFiles.length}</span>
+        </div>
+        
         <ul className="sidebar-list">
           {traceFiles.length === 0 && <li className="sidebar-empty">No traces</li>}
-          {traceFiles.map((trace) => (
-            <li
-              key={trace.id}
-              className={`sidebar-item${trace.id === selectedTraceId ? ' selected' : ''}`}
-              onClick={() => {
-                setSelectedTraceId(trace.id);
-                setAnalysisResult(null);
-                setError(null);
-                fetchTraceDetails(trace.id);
-              }}
-            >
-              <span role="img" aria-label="file">📄</span> {trace.originalFileName}
-            </li>
+          {groupTracesByDate(traceFiles).map((group) => (
+            <React.Fragment key={group.date}>
+              <li className="sidebar-date-header">{group.label}</li>
+              {group.traces.map((trace) => (
+                <li
+                  key={trace.id}
+                  className={`sidebar-item${trace.id === selectedTraceId ? ' selected' : ''}`}
+                  onClick={() => {
+                    setSelectedTraceId(trace.id);
+                    setAnalysisResult(null);
+                    setError(null);
+                    fetchTraceDetails(trace.id);
+                  }}
+                >
+                  <div className="trace-item-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h2.5a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-4a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 3h2.5a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-13a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 8h2.5a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-8a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div className="trace-item-details">
+                    <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
+                    <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
+                  </div>
+                  {getTraceStatus(trace) === 'READY' && (
+                    <div className="trace-item-status">
+                      <svg className="ready-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2l4 -4" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="10" stroke="#66bb6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </React.Fragment>
           ))}
         </ul>
       </aside>
@@ -156,18 +333,44 @@ function App() {
         </div>
         {error && <div className="error">{error}</div>}
         {selectedTrace ? (
-          <section className="trace-details">
-            <h2>Trace Details</h2>
-            <div><b>ID:</b> {selectedTrace.id}</div>
-            <div><b>File Name:</b> {selectedTrace.originalFileName}</div>
-            <div><b>Path:</b> {selectedTrace.originalZipPath}</div>
-            <button
-              className="analyze-btn"
-              onClick={handleAnalyze}
-              disabled={analyzing}
-            >
-              {analyzing ? 'Analyzing...' : 'Analyze'}
-            </button>
+          <section className="trace-details modern-trace-details">
+            <div className="trace-details-header">
+              <span className="trace-details-title">Trace Details</span>
+              <button
+                className="analyze-btn modern-analyze-btn"
+                onClick={handleAnalyze}
+                disabled={analyzing}
+              >
+                {analyzing ? (
+                  <>
+                    <span className="spinner-small"></span>
+                    Analyzing...
+                  </>
+                ) : 'Analyze'}
+              </button>
+            </div>
+            <div className="trace-details-info">
+              <div className="trace-info-row">
+                <span className="trace-info-label" title="ID">ID:</span>
+                <span className="trace-info-value">{selectedTrace.id}</span>
+              </div>
+              <div className="trace-info-row">
+                <span className="trace-info-label" title="File Name">File:</span>
+                <span className="trace-info-value">{selectedTrace.originalFileName}</span>
+              </div>
+              {selectedTrace.uploadedAt && (
+                <div className="trace-info-row">
+                  <span className="trace-info-label" title="Uploaded">Uploaded:</span>
+                  <span className="trace-info-value">{new Date(selectedTrace.uploadedAt).toLocaleString()}</span>
+                </div>
+              )}
+              {selectedTrace.size && (
+                <div className="trace-info-row">
+                  <span className="trace-info-label" title="File Size">Size:</span>
+                  <span className="trace-info-value">{formatFileSize(selectedTrace.size || 0)}</span>
+                </div>
+              )}
+            </div>
             {(analysisResult || (selectedTrace.analyses ?? []).length > 0) && (
               <div className="analysis-result">
                 <h3>Analyses</h3>

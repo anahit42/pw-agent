@@ -1,7 +1,9 @@
 import rateLimit from 'express-rate-limit';
 
-export const rateLimiterMiddleware = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
+export const analyzeRateLimiterMiddleware = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 20, // Limit each IP to 10 analyze requests per 5 minutes
+    message: 'Too many analysis requests from this IP, please try again in 5 minutes.',
+    standardHeaders: true,
+    legacyHeaders: false,
 });

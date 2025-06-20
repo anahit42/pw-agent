@@ -53,9 +53,7 @@ export async function uploadTrace (req: Request, res: Response) {
 
     return res.status(200).json({
         message: 'Trace file uploaded and extracted successfully',
-        traceId: traceFile.id,
-        originalZipPath: objectName,
-        bucketName,
+        trace: traceFile,
     });
 }
 

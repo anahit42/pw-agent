@@ -23,6 +23,11 @@ export async function listTraceFiles({ page, limit }: { page: number; limit: num
         orderBy: { uploadedAt: 'desc' },
         skip,
         take,
+        include: {
+            _count: {
+                select: { analyses: true }
+            }
+        }
     });
 }
 
