@@ -40,7 +40,7 @@ export async function findTraceFileWithAnalysesById(id: string) {
         where: { id },
         include: {
             analyses: {
-                orderBy: { analyzedAt: 'desc' }
+                orderBy: { analyzedAt: 'asc' }
             }
         }
     });
