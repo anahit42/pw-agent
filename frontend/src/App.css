@@ -241,6 +241,32 @@ html, body, #root {
   display: flex;
   align-items: center;
 }
+.trace-item-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.delete-trace-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+.delete-trace-btn:hover {
+  background: rgba(139, 155, 180, 0.1);
+  opacity: 1;
+}
+.delete-trace-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
 .analyzed-badge {
   background: #3a4256;
   color: #7ecfff;

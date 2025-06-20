@@ -34,6 +34,7 @@ function App() {
   const [showUploadLoader, setShowUploadLoader] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
@@ -177,22 +178,66 @@ function App() {
   };
 
   const handleAnalyze = async () => {
-    if (!selectedTraceId) return;
+    if (!selectedTrace) return;
+
     setAnalyzing(true);
     setError(null);
-    setAnalysisResult(null);
+
     try {
-      const res = await fetch(`${API_BASE}/${selectedTraceId}/analyze`, { method: 'POST' });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Analysis failed');
+      const response = await fetch(`/api/traces/${selectedTrace.id}/analyze`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze trace');
       }
-      const data = await res.json();
+
+      const data = await response.json();
       setAnalysisResult(data.result);
-    } catch (err: any) {
-      setError(err.message);
+      
+      // Refresh trace details to get updated analysis count
+      await fetchTraceDetails(selectedTrace.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleDeleteTrace = async (traceId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent trace selection
+    
+    if (!confirm('Are you sure you want to delete this trace? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(traceId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/traces/${traceId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete trace');
+      }
+
+      // Remove from local state
+      setTraceFiles(prev => prev.filter(trace => trace.id !== traceId));
+      
+      // If the deleted trace was selected, clear selection
+      if (selectedTraceId === traceId) {
+        setSelectedTraceId(null);
+        setSelectedTrace(null);
+        setAnalysisResult(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -316,11 +361,27 @@ function App() {
                     <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
                     <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
                   </div>
-                  {getTraceStatus(trace) === 'READY' && (
-                    <div className="trace-item-status">
+                  <div className="trace-item-actions">
+                    {getTraceStatus(trace) === 'READY' && (
                       <span className="analyzed-badge">Analyzed</span>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      className="delete-trace-btn"
+                      onClick={(e) => handleDeleteTrace(trace.id, e)}
+                      disabled={deleting === trace.id}
+                      title="Delete trace"
+                    >
+                      {deleting === trace.id ? (
+                        <span className="spinner-small"></span>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3 6h18" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </li>
               ))}
             </React.Fragment>

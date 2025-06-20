@@ -45,3 +45,9 @@ export async function findTraceFileWithAnalysesById(id: string) {
         }
     });
 }
+
+export async function deleteTraceFile(id: string) {
+    return prisma.traceFile.delete({
+        where: { id }
+    });
+}

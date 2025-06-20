@@ -8,7 +8,7 @@ import {
 } from '../../utils/s3';
 import { config } from '../../config';
 import { extractTraceFiles } from '../../utils/file-manager';
-import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById } from './service';
+import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
 import { NotFoundError } from '../../utils/custom-errors';
 
 export async function uploadTrace (req: Request, res: Response) {
@@ -98,4 +98,14 @@ export async function getTraceWithAnalyses(req: Request, res: Response) {
     }
 
     return res.status(200).json(traceFile);
+}
+
+export async function deleteTrace(req: Request, res: Response) {
+    const { id } = req.params;
+
+    await deleteTraceFileById(id);
+
+    return res.status(200).json({
+        message: 'Trace file deleted successfully',
+    });
 }
