@@ -35,6 +35,9 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [traceToDelete, setTraceToDelete] = useState<string | null>(null);
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
@@ -120,8 +123,20 @@ function App() {
 
   useEffect(() => {
     fetchTraces();
-    // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown && !(event.target as Element).closest('.trace-dropdown')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdown]);
 
   useEffect(() => {
     if (selectedTraceId) {
@@ -241,6 +256,57 @@ function App() {
     }
   };
 
+  const handleDropdownToggle = (traceId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent trace selection
+    setOpenDropdown(openDropdown === traceId ? null : traceId);
+  };
+
+  const handleRemoveClick = (traceId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setOpenDropdown(null);
+    setTraceToDelete(traceId);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!traceToDelete) return;
+    
+    setDeleting(traceToDelete);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/traces/${traceToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete trace');
+      }
+
+      // Remove from local state
+      setTraceFiles(prev => prev.filter(trace => trace.id !== traceToDelete));
+      
+      // If the deleted trace was selected, clear selection
+      if (selectedTraceId === traceToDelete) {
+        setSelectedTraceId(null);
+        setSelectedTrace(null);
+        setAnalysisResult(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setDeleting(null);
+      setShowConfirmModal(false);
+      setTraceToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirmModal(false);
+    setTraceToDelete(null);
+  };
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -358,29 +424,49 @@ function App() {
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h2.5a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-4a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 3h2.5a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-13a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 8h2.5a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-8a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
                   <div className="trace-item-details">
-                    <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
+                    <div className="trace-item-header">
+                      <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
+                      {getTraceStatus(trace) === 'READY' && (
+                        <span className="analyzed-tag">Analyzed</span>
+                      )}
+                    </div>
                     <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
                   </div>
                   <div className="trace-item-actions">
-                    {getTraceStatus(trace) === 'READY' && (
-                      <span className="analyzed-badge">Analyzed</span>
-                    )}
-                    <button
-                      className="delete-trace-btn"
-                      onClick={(e) => handleDeleteTrace(trace.id, e)}
-                      disabled={deleting === trace.id}
-                      title="Delete trace"
-                    >
-                      {deleting === trace.id ? (
-                        <span className="spinner-small"></span>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3 6h18" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                    <div className="trace-dropdown">
+                      <button
+                        className="trace-menu-btn"
+                        onClick={(e) => handleDropdownToggle(trace.id, e)}
+                        disabled={deleting === trace.id}
+                        title="More options"
+                      >
+                        {deleting === trace.id ? (
+                          <span className="spinner-small"></span>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="6" cy="12" r="1" fill="currentColor"/>
+                            <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                            <circle cx="18" cy="12" r="1" fill="currentColor"/>
+                          </svg>
+                        )}
+                      </button>
+                      {openDropdown === trace.id && (
+                        <div className="dropdown-menu">
+                          <button
+                            className="dropdown-item"
+                            onClick={(e) => handleRemoveClick(trace.id, e)}
+                            disabled={deleting === trace.id}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -485,6 +571,48 @@ function App() {
           <div className="no-trace">Select a trace from the sidebar to view details.</div>
         )}
       </main>
+      
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke="#ff4d6d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h3 className="modal-title">Delete Trace</h3>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this trace? This action cannot be undone.</p>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="modal-btn modal-btn-secondary" 
+                onClick={handleCancelDelete}
+                disabled={deleting === traceToDelete}
+              >
+                Cancel
+              </button>
+              <button 
+                className="modal-btn modal-btn-danger" 
+                onClick={handleConfirmDelete}
+                disabled={deleting === traceToDelete}
+              >
+                {deleting === traceToDelete ? (
+                  <>
+                    <span className="spinner-small"></span>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
