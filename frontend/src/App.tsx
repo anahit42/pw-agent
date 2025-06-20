@@ -335,29 +335,11 @@ function App() {
         {selectedTrace ? (
           <section className="trace-details modern-trace-details">
             <div className="trace-details-header">
-              <span className="trace-details-title">Trace Details</span>
-              <button
-                className="analyze-btn modern-analyze-btn"
-                onClick={handleAnalyze}
-                disabled={analyzing}
-              >
-                {analyzing ? (
-                  <>
-                    <span className="spinner-small"></span>
-                    Analyzing...
-                  </>
-                ) : 'Analyze'}
-              </button>
+              <span className="trace-details-title" title={selectedTrace.originalFileName}>
+                {selectedTrace.originalFileName}
+              </span>
             </div>
             <div className="trace-details-info">
-              <div className="trace-info-row">
-                <span className="trace-info-label" title="ID">ID:</span>
-                <span className="trace-info-value">{selectedTrace.id}</span>
-              </div>
-              <div className="trace-info-row">
-                <span className="trace-info-label" title="File Name">File:</span>
-                <span className="trace-info-value">{selectedTrace.originalFileName}</span>
-              </div>
               {selectedTrace.uploadedAt && (
                 <div className="trace-info-row">
                   <span className="trace-info-label" title="Uploaded">Uploaded:</span>
@@ -371,9 +353,12 @@ function App() {
                 </div>
               )}
             </div>
-            {(analysisResult || (selectedTrace.analyses ?? []).length > 0) && (
+            
+            {(analysisResult || (selectedTrace.analyses ?? []).length > 0) ? (
               <div className="analysis-result">
-                <h3>Analyses</h3>
+                <div className="analysis-header">
+                  <h3>Analyses</h3>
+                </div>
                 {analysisResult && (
                     <>
                       <AnalysisResult analysis={analysisResult} analyzedAt="just now" />
@@ -390,6 +375,48 @@ function App() {
                       )}
                     </React.Fragment>
                 ))}
+                <div className="analysis-actions">
+                  <button
+                    className="analyze-action-btn"
+                    onClick={handleAnalyze}
+                    disabled={analyzing}
+                  >
+                    {analyzing ? (
+                      <>
+                        <span className="spinner"></span>
+                        Analyzing Trace...
+                      </>
+                    ) : (
+                      <>
+                        <span className="analyze-icon">🔄</span>
+                        Run New Analysis
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="no-analysis-info">
+                <div className="no-analysis-icon">🔍</div>
+                <h3>Ready to Analyze</h3>
+                <p>Get insights from your Playwright trace</p>
+                <button
+                  className="analyze-action-btn"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                >
+                  {analyzing ? (
+                    <>
+                      <span className="spinner"></span>
+                      Analyzing Trace...
+                    </>
+                  ) : (
+                    <>
+                      <span className="analyze-icon">⚡</span>
+                      Start Analysis
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </section>

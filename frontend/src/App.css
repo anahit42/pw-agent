@@ -649,10 +649,14 @@ html, body, #root {
   border-bottom: 1px solid #232a3a;
 }
 .trace-details-title {
-  font-size: 1.35em;
-  font-weight: 700;
-  color: #b0bad6;
-  letter-spacing: 0.5px;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #e0e6f0;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
 }
 .trace-details-info {
   margin-bottom: 20px;
@@ -732,4 +736,77 @@ html, body, #root {
 }
 .sidebar-item.selected:hover {
   background: #232a3a; /* Ensure hover and selected states are the same */
+}
+
+.no-analysis-info {
+  text-align: center;
+  padding: 40px 20px;
+  background: #1a2233;
+  border-radius: 12px;
+  margin-top: 20px;
+  border: 1px solid #232a3a;
+}
+.no-analysis-icon {
+  font-size: 2.5em;
+  margin-bottom: 12px;
+}
+.no-analysis-info h3 {
+  margin: 0 0 8px 0;
+  color: #e0e6f0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.no-analysis-info p {
+  margin: 4px 0 24px 0;
+  color: #b0bad6;
+  font-size: 0.95em;
+}
+.analyze-action-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+.analyze-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+}
+.analyze-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.analyze-action-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+.analyze-icon {
+  font-size: 1.1em;
+}
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.analysis-header h3 {
+  margin: 0;
+  color: #e0e6f0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.analysis-actions {
+  margin-top: 30px;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #232a3a;
 }
