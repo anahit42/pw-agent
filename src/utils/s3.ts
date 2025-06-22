@@ -93,6 +93,8 @@ export async function downloadObject({ bucketName, objectName }: {
   objectName: string
 }): Promise<Buffer> {
   try {
+    logger.info(`Downloading object file from S3: ${objectName}`);
+
     const response = await s3Client.send(new GetObjectCommand({
       Bucket: bucketName,
       Key: objectName

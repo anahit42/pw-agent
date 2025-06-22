@@ -7,53 +7,36 @@ import {
     uploadObject
 } from '../../utils/s3';
 import { config } from '../../config';
-import { extractTraceFiles } from '../../utils/file-manager';
-import { uploadTraceFile, getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
+import { getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
 import { NotFoundError } from '../../utils/custom-errors';
+import { addExtractionJob, getExtractionJobState } from '../../utils/queue/zip-extraction-queue';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { bucketName } = config.s3;
-    const id = generateUID();
+    const traceId = generateUID();
     const { buffer, mimetype, originalname } = req.file;
-    const objectName = generateOriginalTraceFilePath(id);
+    const s3Key = generateOriginalTraceFilePath(traceId);
 
-    await createBucketIfNotExists(bucketName);
-
+    await createBucketIfNotExists(config.s3.bucketName);
     await uploadObject({
-        bucketName,
-        objectName,
+        bucketName: config.s3.bucketName,
+        objectName: s3Key,
         data: buffer,
         contentType: mimetype,
     });
-
-    const fileBuffers = await extractTraceFiles(buffer, ['test', 'network', 'stacks'])
-
-    for (const fileBufferKey of Object.keys(fileBuffers)) {
-        const fileBuffer = fileBuffers[fileBufferKey];
-        const extractedObjectName = `traces/${id}/${fileBufferKey}.txt`;
-        const data = fileBuffer.toString('utf-8');
-
-        await uploadObject({
-            bucketName,
-            objectName: extractedObjectName,
-            data,
-            contentType: 'text/plain',
-        });
-    }
-
-    const traceFile = await uploadTraceFile({
-        id,
+    await addExtractionJob({
+        traceId,
         originalFileName: originalname,
-        originalZipPath: objectName,
+        s3Key
     });
 
-    return res.status(200).json({
-        message: 'Trace file uploaded and extracted successfully',
-        trace: traceFile,
+    return res.status(202).json({
+        message: 'File uploaded and extraction queued',
+        traceId,
+        status: 'queued'
     });
 }
 
@@ -108,4 +91,11 @@ export async function deleteTrace(req: Request, res: Response) {
     return res.status(200).json({
         message: 'Trace file deleted successfully',
     });
+}
+
+export async function getJobStatus(req: Request, res: Response) {
+    const { id } = req.params;
+    const status = await getExtractionJobState(id);
+
+    return res.status(200).json(status);
 }

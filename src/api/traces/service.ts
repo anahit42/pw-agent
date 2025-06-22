@@ -1,11 +1,11 @@
-import { createTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles, findTraceFileWithAnalysesById, deleteTraceFile } from './repository';
+import { saveTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles, findTraceFileWithAnalysesById, deleteTraceFile } from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
 import { BadRequestError, NotFoundError } from '../../utils/custom-errors';
 import { deleteObject, listObjects } from '../../utils/s3';
 import { config } from '../../config';
 
-export async function uploadTraceFile({ id, originalFileName, originalZipPath }: { id: string; originalFileName: string; originalZipPath: string }) {
-    return createTraceFile({ id, originalFileName, originalZipPath });
+export async function createTraceFile({ id, originalFileName, originalZipPath }: { id: string; originalFileName: string; originalZipPath: string }) {
+    return saveTraceFile({ id, originalFileName, originalZipPath });
 }
 
 export async function getTraceFileById(id: string) {
@@ -58,7 +58,7 @@ export async function deleteTraceFileById(id: string) {
     // Delete all associated files from S3
     const tracePrefix = `traces/${id}/`;
     const objects = await listObjects({ bucketName, prefix: tracePrefix });
-    
+
     // Delete all objects with this trace prefix
     for (const objectName of objects) {
         await deleteObject({ bucketName, objectName });

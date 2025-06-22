@@ -1,6 +1,6 @@
 import { prisma } from '../../utils/db';
 
-export async function createTraceFile(data: { id: string; originalFileName: string; originalZipPath: string }) {
+export async function saveTraceFile(data: { id: string; originalFileName: string; originalZipPath: string }) {
     return prisma.traceFile.create({ data });
 }
 

@@ -38,51 +38,46 @@ function App() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [traceToDelete, setTraceToDelete] = useState<string | null>(null);
+  const [queuedUploads, setQueuedUploads] = useState<Set<string>>(new Set());
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
-    
+
     traces.forEach(trace => {
       const date = trace.uploadedAt ? new Date(trace.uploadedAt) : new Date();
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       let groupKey: string;
-      let label: string;
-      
+
       if (date.toDateString() === today.toDateString()) {
         groupKey = 'today';
-        label = 'Today';
       } else if (date.toDateString() === yesterday.toDateString()) {
         groupKey = 'yesterday';
-        label = 'Yesterday';
       } else if (date.getTime() > today.getTime() - 7 * 24 * 60 * 60 * 1000) {
         groupKey = 'this-week';
-        label = 'This week';
       } else if (date.getTime() > today.getTime() - 30 * 24 * 60 * 60 * 1000) {
         groupKey = 'this-month';
-        label = 'This month';
       } else {
         groupKey = 'older';
-        label = 'Older';
       }
-      
+
       if (!groups[groupKey]) {
         groups[groupKey] = [];
       }
       groups[groupKey].push(trace);
     });
-    
+
     // Convert to array and sort by date
     const groupOrder = ['today', 'yesterday', 'this-week', 'this-month', 'older'];
     return groupOrder
       .filter(key => groups[key] && groups[key].length > 0)
       .map(key => ({
         date: key,
-        label: key === 'today' ? 'Today' : 
-               key === 'yesterday' ? 'Yesterday' : 
-               key === 'this-week' ? 'This week' : 
+        label: key === 'today' ? 'Today' :
+               key === 'yesterday' ? 'Yesterday' :
+               key === 'this-week' ? 'This week' :
                key === 'this-month' ? 'This month' : 'Older',
         traces: groups[key].sort((a, b) => {
           const dateA = a.uploadedAt ? new Date(a.uploadedAt) : new Date(0);
@@ -178,11 +173,25 @@ function App() {
         const errData = await res.json();
         throw new Error(errData.error || 'Upload failed');
       }
-      const { trace: newTrace } = await res.json();
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      await fetchTraces();
-      setSelectedTraceId(newTrace.id);
+
+      const responseData = await res.json();
+
+      if (res.status === 202 && responseData.status === 'queued') {
+        // File uploaded and queued for processing
+        setQueuedUploads(prev => new Set(prev).add(responseData.traceId));
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+
+        // Start polling for job status
+        pollJobStatus(responseData.traceId);
+      } else {
+        // Legacy response format (should not happen with new flow)
+        const { trace: newTrace } = responseData;
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        await fetchTraces();
+        setSelectedTraceId(newTrace.id);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -190,6 +199,81 @@ function App() {
       setUploading(false);
       setShowUploadLoader(false);
     }
+  };
+
+  const pollJobStatus = async (traceId: string) => {
+    const maxAttempts = 60; // 5 minutes with 5-second intervals
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/${traceId}/upload-status`);
+        if (response.ok) {
+          const status = await response.json();
+
+          if (status.status === 'completed') {
+            // Job completed successfully
+            setQueuedUploads(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(traceId);
+              return newSet;
+            });
+            await fetchTraces(); // Refresh the traces list
+            setSelectedTraceId(traceId);
+            return;
+          } else if (status.status === 'failed') {
+            // Job failed
+            setQueuedUploads(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(traceId);
+              return newSet;
+            });
+            setError(`Extraction failed: ${status.failedReason || 'Unknown error'}`);
+            return;
+          } else if (status.status === 'not_found') {
+            // Job not found (might have been completed already)
+            setQueuedUploads(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(traceId);
+              return newSet;
+            });
+            await fetchTraces(); // Refresh the traces list
+            setSelectedTraceId(traceId);
+            return;
+          }
+        }
+
+        // Continue polling if job is still in progress
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // Poll every 5 seconds
+        } else {
+          // Timeout
+          setQueuedUploads(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          setError('Extraction timed out. Please check the trace status later.');
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000);
+        } else {
+          setQueuedUploads(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          setError('Failed to check extraction status. Please refresh the page.');
+        }
+      }
+    };
+
+    // Start polling after a short delay
+    setTimeout(poll, 2000);
   };
 
   const handleAnalyze = async () => {
@@ -210,49 +294,13 @@ function App() {
 
       const data = await response.json();
       setAnalysisResult(data.result);
-      
+
       // Refresh trace details to get updated analysis count
       await fetchTraceDetails(selectedTrace.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAnalyzing(false);
-    }
-  };
-
-  const handleDeleteTrace = async (traceId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent trace selection
-    
-    if (!confirm('Are you sure you want to delete this trace? This action cannot be undone.')) {
-      return;
-    }
-
-    setDeleting(traceId);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/traces/${traceId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete trace');
-      }
-
-      // Remove from local state
-      setTraceFiles(prev => prev.filter(trace => trace.id !== traceId));
-      
-      // If the deleted trace was selected, clear selection
-      if (selectedTraceId === traceId) {
-        setSelectedTraceId(null);
-        setSelectedTrace(null);
-        setAnalysisResult(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setDeleting(null);
     }
   };
 
@@ -270,7 +318,7 @@ function App() {
 
   const handleConfirmDelete = async () => {
     if (!traceToDelete) return;
-    
+
     setDeleting(traceToDelete);
     setError(null);
 
@@ -286,7 +334,7 @@ function App() {
 
       // Remove from local state
       setTraceFiles(prev => prev.filter(trace => trace.id !== traceToDelete));
-      
+
       // If the deleted trace was selected, clear selection
       if (selectedTraceId === traceToDelete) {
         setSelectedTraceId(null);
@@ -348,25 +396,25 @@ function App() {
           </span> <b>Traces</b>
         </div>
 
-        <form 
-          onSubmit={handleUpload} 
+        <form
+          onSubmit={handleUpload}
           className={`sidebar-upload-form`}
         >
-          <div 
+          <div
             className={`file-drop-area ${isDragOver ? 'drag-over' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <input 
+            <input
               ref={fileInputRef}
-              type="file" 
-              accept=".zip" 
+              type="file"
+              accept=".zip"
               onChange={handleFileChange}
               disabled={uploading}
               className="file-input"
             />
-            
+
             {showUploadLoader ? (
               <div className="sidebar-upload-progress">
                 <span className="spinner-small"></span>
@@ -403,7 +451,30 @@ function App() {
           <h4>Recent Traces</h4>
           <span className="trace-count-badge">{traceFiles.length}</span>
         </div>
-        
+
+        {/* Show queued uploads */}
+        {queuedUploads.size > 0 && (
+          <div className="queued-uploads-section">
+            <h4>Processing...</h4>
+            <ul className="sidebar-list">
+              {Array.from(queuedUploads).map((traceId) => (
+                <li key={traceId} className="sidebar-item queued">
+                  <div className="trace-item-icon">
+                    <span className="spinner-small"></span>
+                  </div>
+                  <div className="trace-item-details">
+                    <div className="trace-item-header">
+                      <span className="trace-item-name">Processing...</span>
+                      <span className="queued-tag">Queued</span>
+                    </div>
+                    <span className="trace-item-time">Extracting files...</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <ul className="sidebar-list">
           {traceFiles.length === 0 && <li className="sidebar-empty">No traces</li>}
           {groupTracesByDate(traceFiles).map((group) => (
@@ -500,7 +571,7 @@ function App() {
                 </div>
               )}
             </div>
-            
+
             {(analysisResult || (selectedTrace.analyses ?? []).length > 0) ? (
               <div className="analysis-result">
                 <div className="analysis-header">
@@ -571,7 +642,7 @@ function App() {
           <div className="no-trace">Select a trace from the sidebar to view details.</div>
         )}
       </main>
-      
+
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="modal-overlay" onClick={handleCancelDelete}>
@@ -588,15 +659,15 @@ function App() {
               <p>Are you sure you want to delete this trace? This action cannot be undone.</p>
             </div>
             <div className="modal-actions">
-              <button 
-                className="modal-btn modal-btn-secondary" 
+              <button
+                className="modal-btn modal-btn-secondary"
                 onClick={handleCancelDelete}
                 disabled={deleting === traceToDelete}
               >
                 Cancel
               </button>
-              <button 
-                className="modal-btn modal-btn-danger" 
+              <button
+                className="modal-btn modal-btn-danger"
                 onClick={handleConfirmDelete}
                 disabled={deleting === traceToDelete}
               >

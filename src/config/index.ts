@@ -20,6 +20,28 @@ export const config = {
     useMinio: process.env.USE_MINIO === 'true',
   },
 
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || 'redispwd',
+  },
+
+  queue: {
+    zipExtractionQueue: {
+      name: 'zip-extraction',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+      concurrency: 3,
+    },
+  },
+
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     host: process.env.HOST || 'localhost'
