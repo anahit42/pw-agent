@@ -290,20 +290,20 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // If analysis already exists, show the existing analysis
         if (response.status === 400 && errorData.analysis) {
           setAnalysisResult(errorData.analysis);
           // Refresh trace details to get updated analysis count
           await fetchTraceDetails(selectedTrace.id);
+          // Refresh trace list to update the analyzed tag in sidebar
+          await fetchTraces();
           return;
         }
-        
+
         throw new Error(errorData.error || 'Failed to analyze trace');
       }
 
-      const data = await response.json();
-      
       // Add to queued analyses and start polling
       setQueuedAnalyses(prev => new Set(prev).add(selectedTrace.id));
       pollAnalysisJobStatus(selectedTrace.id);
@@ -332,9 +332,11 @@ function App() {
             newSet.delete(traceId);
             return newSet;
           });
-          
+
           // Refresh trace details to get the new analysis
           await fetchTraceDetails(traceId);
+          // Refresh trace list to update the analyzed tag in sidebar
+          await fetchTraces();
         } else if (status.status === 'failed') {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);
@@ -544,34 +546,6 @@ function App() {
           </div>
         )}
 
-        {/* Show queued analyses */}
-        {queuedAnalyses.size > 0 && (
-          <div className="queued-uploads-section">
-            <h4>Analyzing...</h4>
-            <ul className="sidebar-list">
-              {Array.from(queuedAnalyses).map((traceId) => {
-                const trace = traceFiles.find(t => t.id === traceId);
-                return (
-                  <li key={traceId} className="sidebar-item queued">
-                    <div className="trace-item-icon">
-                      <span className="spinner-small"></span>
-                    </div>
-                    <div className="trace-item-details">
-                      <div className="trace-item-header">
-                        <span className="trace-item-name" title={trace?.originalFileName || 'Unknown'}>
-                          {trace?.originalFileName || 'Unknown'}
-                        </span>
-                        <span className="queued-tag">Analyzing</span>
-                      </div>
-                      <span className="trace-item-time">Running analysis...</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
         <ul className="sidebar-list">
           {traceFiles.length === 0 && <li className="sidebar-empty">No traces</li>}
           {groupTracesByDate(traceFiles).map((group) => (
@@ -596,9 +570,6 @@ function App() {
                       <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
                       {getTraceStatus(trace) === 'READY' && (
                         <span className="analyzed-tag">Analyzed</span>
-                      )}
-                      {queuedAnalyses.has(trace.id) && (
-                        <span className="queued-tag">Analyzing</span>
                       )}
                     </div>
                     <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
@@ -695,6 +666,30 @@ function App() {
                 ))}
                 <div className="analysis-actions">
                   {/* Analysis button removed - only one analysis allowed per trace */}
+                </div>
+              </div>
+            ) : queuedAnalyses.has(selectedTrace.id) ? (
+              <div className="analysis-loading">
+                <div className="analysis-loading-content">
+                  <div className="analysis-loading-icon">
+                    <span className="spinner"></span>
+                  </div>
+                  <h3>Analyzing Trace...</h3>
+                  <p>AI is analyzing your Playwright trace to provide insights and debugging information.</p>
+                  <div className="analysis-loading-steps">
+                    <div className="loading-step">
+                      <span className="step-icon">🔍</span>
+                      <span>Extracting trace data</span>
+                    </div>
+                    <div className="loading-step">
+                      <span className="step-icon">🧠</span>
+                      <span>Analyzing test failures</span>
+                    </div>
+                    <div className="loading-step">
+                      <span className="step-icon">💡</span>
+                      <span>Generating insights</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
