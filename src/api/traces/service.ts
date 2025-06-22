@@ -1,4 +1,12 @@
-import { saveTraceFile, findTraceFileById, createTraceAnalysis, listTraceFiles, countTraceFiles, findTraceFileWithAnalysesById, deleteTraceFile } from './repository';
+import {
+    saveTraceFile,
+    findTraceFileById,
+    saveTraceAnalysis,
+    listTraceFiles,
+    countTraceFiles,
+    findTraceFileWithAnalysesById,
+    deleteTraceFile,
+} from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
 import { BadRequestError, NotFoundError } from '../../utils/custom-errors';
 import { deleteObject, listObjects } from '../../utils/s3';
@@ -6,6 +14,14 @@ import { config } from '../../config';
 
 export async function createTraceFile({ id, originalFileName, originalZipPath }: { id: string; originalFileName: string; originalZipPath: string }) {
     return saveTraceFile({ id, originalFileName, originalZipPath });
+}
+
+export async function createTraceAnalysis(data: {
+    traceFileId: string;
+    analysisJson: any;
+    analyzedAt?: Date;
+}) {
+    return saveTraceAnalysis(data);
 }
 
 export async function getTraceFileById(id: string) {

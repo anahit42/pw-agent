@@ -50,8 +50,7 @@ docker-compose up -d
 Run Prisma migrations and generate the client:
 
 ```bash
-npx prisma migrate dev
-npx prisma generate
+npm run init-db
 ```
 
 ### 6. Start the backend
@@ -66,6 +65,7 @@ The server will start at [http://localhost:3000](http://localhost:3000).
 
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 

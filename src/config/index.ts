@@ -29,6 +29,7 @@ export const config = {
   queue: {
     zipExtractionQueue: {
       name: 'zip-extraction',
+      jobName: 'extract-zip',
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -39,6 +40,20 @@ export const config = {
         removeOnFail: 50,
       },
       concurrency: 3,
+    },
+    traceAnalysisQueue: {
+      name: 'trace-analysis',
+      jobName: 'analyze-trace',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+      concurrency: 2,
     },
   },
 

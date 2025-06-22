@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "npx ts-node src/index.ts",
+    "init-db": "npx prisma migrate dev && npx prisma generate",
     "test": "jest"
   },
   "dependencies": {

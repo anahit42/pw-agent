@@ -8,8 +8,9 @@ import {
 } from '../../utils/s3';
 import { config } from '../../config';
 import { getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
-import { NotFoundError } from '../../utils/custom-errors';
+import {BadRequestError, NotFoundError} from '../../utils/custom-errors';
 import { addExtractionJob, getExtractionJobState } from '../../utils/queue/zip-extraction-queue';
+import { addAnalysisJob, getAnalysisJobState } from '../../utils/queue/trace-analysis-queue';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -43,17 +44,24 @@ export async function uploadTrace (req: Request, res: Response) {
 export async function analyzeTrace (req: Request, res: Response) {
     const { id } = req.params;
 
-    const traceFile = await getTraceFileById(id);
+    const traceFile = await getTraceFileWithAnalysesById(id);
 
     if (!traceFile) {
-        return res.status(404).json({ error: 'Trace file not found in database' });
+        throw new NotFoundError('Trace file not found');
     }
 
-    const analysis = await analyzeTraceById(traceFile.id);
+    if (traceFile.analyses && traceFile.analyses.length > 0) {
+        throw new BadRequestError('Analysis already exists for this trace file');
+    }
 
-    return res.status(200).json({
-        message: 'Trace file analyzed successfully',
-        result: analysis,
+    await addAnalysisJob({
+        traceId: id,
+    });
+
+    return res.status(202).json({
+        message: 'Analysis job queued successfully',
+        traceId: id,
+        status: 'queued'
     });
 }
 
@@ -96,6 +104,13 @@ export async function deleteTrace(req: Request, res: Response) {
 export async function getJobStatus(req: Request, res: Response) {
     const { id } = req.params;
     const status = await getExtractionJobState(id);
+
+    return res.status(200).json(status);
+}
+
+export async function getAnalysisJobStatus(req: Request, res: Response) {
+    const { id } = req.params;
+    const status = await getAnalysisJobState(id);
 
     return res.status(200).json(status);
 }

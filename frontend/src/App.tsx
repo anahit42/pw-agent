@@ -39,6 +39,7 @@ function App() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [traceToDelete, setTraceToDelete] = useState<string | null>(null);
   const [queuedUploads, setQueuedUploads] = useState<Set<string>>(new Set());
+  const [queuedAnalyses, setQueuedAnalyses] = useState<Set<string>>(new Set());
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
@@ -289,19 +290,87 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // If analysis already exists, show the existing analysis
+        if (response.status === 400 && errorData.analysis) {
+          setAnalysisResult(errorData.analysis);
+          // Refresh trace details to get updated analysis count
+          await fetchTraceDetails(selectedTrace.id);
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to analyze trace');
       }
 
       const data = await response.json();
-      setAnalysisResult(data.result);
+      
+      // Add to queued analyses and start polling
+      setQueuedAnalyses(prev => new Set(prev).add(selectedTrace.id));
+      pollAnalysisJobStatus(selectedTrace.id);
 
-      // Refresh trace details to get updated analysis count
-      await fetchTraceDetails(selectedTrace.id);
+      // Clear any previous analysis result
+      setAnalysisResult(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const pollAnalysisJobStatus = async (traceId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes with 5-second intervals
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/traces/${traceId}/analysis-status`);
+        const status = await response.json();
+
+        if (status.status === 'completed') {
+          setQueuedAnalyses(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          
+          // Refresh trace details to get the new analysis
+          await fetchTraceDetails(traceId);
+        } else if (status.status === 'failed') {
+          setQueuedAnalyses(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          setError(`Analysis failed: ${status.failedReason || 'Unknown error'}`);
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(poll, 5000);
+        } else {
+          setQueuedAnalyses(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          setError('Analysis timed out. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error polling analysis status:', error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000);
+        } else {
+          setQueuedAnalyses(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(traceId);
+            return newSet;
+          });
+          setError('Failed to check analysis status. Please refresh the page.');
+        }
+      }
+    };
+
+    // Start polling after a short delay
+    setTimeout(poll, 2000);
   };
 
   const handleDropdownToggle = (traceId: string, event: React.MouseEvent) => {
@@ -475,6 +544,34 @@ function App() {
           </div>
         )}
 
+        {/* Show queued analyses */}
+        {queuedAnalyses.size > 0 && (
+          <div className="queued-uploads-section">
+            <h4>Analyzing...</h4>
+            <ul className="sidebar-list">
+              {Array.from(queuedAnalyses).map((traceId) => {
+                const trace = traceFiles.find(t => t.id === traceId);
+                return (
+                  <li key={traceId} className="sidebar-item queued">
+                    <div className="trace-item-icon">
+                      <span className="spinner-small"></span>
+                    </div>
+                    <div className="trace-item-details">
+                      <div className="trace-item-header">
+                        <span className="trace-item-name" title={trace?.originalFileName || 'Unknown'}>
+                          {trace?.originalFileName || 'Unknown'}
+                        </span>
+                        <span className="queued-tag">Analyzing</span>
+                      </div>
+                      <span className="trace-item-time">Running analysis...</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <ul className="sidebar-list">
           {traceFiles.length === 0 && <li className="sidebar-empty">No traces</li>}
           {groupTracesByDate(traceFiles).map((group) => (
@@ -499,6 +596,9 @@ function App() {
                       <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
                       {getTraceStatus(trace) === 'READY' && (
                         <span className="analyzed-tag">Analyzed</span>
+                      )}
+                      {queuedAnalyses.has(trace.id) && (
+                        <span className="queued-tag">Analyzing</span>
                       )}
                     </div>
                     <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
@@ -594,30 +694,14 @@ function App() {
                     </React.Fragment>
                 ))}
                 <div className="analysis-actions">
-                  <button
-                    className="analyze-action-btn"
-                    onClick={handleAnalyze}
-                    disabled={analyzing}
-                  >
-                    {analyzing ? (
-                      <>
-                        <span className="spinner"></span>
-                        Analyzing Trace...
-                      </>
-                    ) : (
-                      <>
-                        <span className="analyze-icon">🔄</span>
-                        Run New Analysis
-                      </>
-                    )}
-                  </button>
+                  {/* Analysis button removed - only one analysis allowed per trace */}
                 </div>
               </div>
             ) : (
               <div className="no-analysis-info">
                 <div className="no-analysis-icon">🔍</div>
                 <h3>Ready to Analyze</h3>
-                <p>Get insights from your Playwright trace</p>
+                <p>Get insights from your Playwright trace (one-time analysis)</p>
                 <button
                   className="analyze-action-btn"
                   onClick={handleAnalyze}

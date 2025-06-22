@@ -3,3 +3,7 @@ export interface ExtractionJobData {
     originalFileName: string;
     s3Key: string;
 }
+
+export interface TraceAnalysisJobData {
+    traceId: string;
+}

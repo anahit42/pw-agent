@@ -92,7 +92,7 @@ function getExtractionQueue(): Queue {
         });
 
         extractionQueue.on('waiting', (job: Job<ExtractionJobData>) => {
-            logger.info(`⏳ Extraction job ${job.id} waiting for trace ${job.data.traceId}`);
+            logger.info(`Extraction job ${job.id} waiting for trace ${job.data.traceId}`);
         });
     }
 
@@ -105,8 +105,8 @@ export function initExtractionWorker() {
 
 export async function addExtractionJob(data: ExtractionJobData): Promise<Job<ExtractionJobData>> {
     const queue = getExtractionQueue();
-    return await queue.add('extract-zip', data, {
-        jobId: data.traceId,
+    return await queue.add(config.queue.zipExtractionQueue.jobName, data, {
+        jobId: `${data.traceId}-extraction`,
         priority: 1,
     });
 }
@@ -114,7 +114,7 @@ export async function addExtractionJob(data: ExtractionJobData): Promise<Job<Ext
 export async function getExtractionJobState(traceId: string): Promise<any> {
     const queue = getExtractionQueue();
 
-    const job = await queue.getJob(traceId);
+    const job = await queue.getJob(`${traceId}-extraction`);
 
     if (!job) {
         return { status: 'not_found' };
