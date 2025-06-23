@@ -8,9 +8,11 @@ import {
     deleteTraceFile,
 } from './repository';
 import { analyzeTraceFile } from '../../agent/test-analyzer';
-import { BadRequestError, NotFoundError } from '../../utils/custom-errors';
-import { deleteObject, listObjects } from '../../utils/s3';
+import { NotFoundError } from '../../utils/custom-errors';
+import { deleteObject, downloadObject, listObjects, uploadObject } from '../../utils/s3';
 import { config } from '../../config';
+import { extractTraceFiles, parseToJSON } from '../../utils/file-manager';
+import { logger } from '../../utils/logger';
 
 export async function createTraceFile({ id, originalFileName, originalZipPath }: { id: string; originalFileName: string; originalZipPath: string }) {
     return saveTraceFile({ id, originalFileName, originalZipPath });
@@ -24,28 +26,51 @@ export async function createTraceAnalysis(data: {
     return saveTraceAnalysis(data);
 }
 
-export async function getTraceFileById(id: string) {
-    return findTraceFileById(id);
+export async function extractTraceFile({
+    traceId,
+    fileKey,
+    originalFileName,
+}: {
+    traceId: string;
+    fileKey: string;
+    originalFileName: string;
+}) {
+    const bucketName = config.s3.bucketName;
+
+    const zipBuffer = await downloadObject({ bucketName, objectName: fileKey });
+
+    logger.info(`Extracting trace files from zip, trace id: ${traceId} `);
+    const fileBuffers = await extractTraceFiles(zipBuffer, ['test', 'network', 'stacks']);
+
+    logger.info(`Uploading extracted files to S3`);
+    for (const fileBufferKey of Object.keys(fileBuffers)) {
+        const fileBuffer = fileBuffers[fileBufferKey];
+        const extractedObjectName = `traces/${traceId}/${fileBufferKey}.txt`;
+        const data = fileBuffer.toString('utf-8');
+        await uploadObject({
+            bucketName,
+            objectName: extractedObjectName,
+            data,
+            contentType: 'text/plain',
+        });
+    }
+
+    logger.info(`Saving trace record to database, trace id: ${traceId}`);
+
+    return createTraceFile({
+        id: traceId,
+        originalFileName,
+        originalZipPath: fileKey,
+    });
 }
 
-export async function analyzeTraceById(traceFileId: string) {
-    const traceFile = await findTraceFileById(traceFileId);
+export async function analyzeTraceById(traceId: string) {
+    const result = await analyzeTraceFile(traceId);
+    const parsedResult = parseToJSON(result);
 
-    if (!traceFile) {
-        return null;
-    }
-
-    const result = await analyzeTraceFile(traceFile.id);
-
-    let parsedResult;
-    try {
-        parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-    } catch (e) {
-        throw new BadRequestError('Failed to parse analysis result');
-    }
-
+    logger.info(`Saving analysis result to database, trace id: ${traceId}`);
     return createTraceAnalysis({
-        traceFileId: traceFile.id,
+        traceFileId: traceId,
         analysisJson: parsedResult,
     });
 }

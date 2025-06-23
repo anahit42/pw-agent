@@ -92,16 +92,15 @@ function App() {
       }));
   };
 
-  const fetchTraces = async () => {
+  const fetchTraces = async (opts?: { preserveSelection?: boolean }) => {
     try {
       setError(null);
       const res = await fetch(`${API_BASE}?page=1&limit=50`);
       const data = await res.json();
       setTraceFiles(data.traces || []);
-      if (!selectedTraceId && data.traces && data.traces.length > 0) {
+      if (!opts?.preserveSelection && !selectedTraceId && data.traces && data.traces.length > 0) {
         setSelectedTraceId(data.traces[0].id);
       }
-      // Clean up queuedUploads for traces that are now present
       setQueuedUploads(prev => {
         const traceIds = new Set((data.traces || []).map((t: TraceFile) => String(t.id)));
         const newSet = new Set(prev);
@@ -187,7 +186,21 @@ function App() {
           console.log('[WebSocket] Removed from queuedUploads:', String(data.jobId), Array.from(newSet));
           return newSet;
         });
-        fetchTraces();
+        fetchTraces({ preserveSelection: true });
+        setSelectedTraceId(data.jobId);
+      }
+    });
+
+    socket.on('analysisCompleted', (data: any) => {
+      console.log('[WebSocket] analysisCompleted event:', data);
+      if (data && data.jobId && data.status === 'done') {
+        setQueuedAnalyses(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(String(data.jobId));
+          return newSet;
+        });
+        fetchTraces({ preserveSelection: true });
+        fetchTraceDetails(data.jobId);
         setSelectedTraceId(data.jobId);
       }
     });
@@ -198,44 +211,6 @@ function App() {
     };
     // eslint-disable-next-line
   }, []);
-
-  // Fallback polling for stuck uploads
-  useEffect(() => {
-    if (queuedUploads.size === 0) return;
-    const interval = setInterval(() => {
-      queuedUploads.forEach(async (traceId) => {
-        try {
-          const response = await fetch(`${API_BASE}/${traceId}/upload-status`);
-          if (response.ok) {
-            const status = await response.json();
-            if (status.status === 'completed' || status.status === 'not_found') {
-              setQueuedUploads(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(String(traceId));
-                console.log('[Polling] Removed from queuedUploads:', String(traceId), Array.from(newSet));
-                return newSet;
-              });
-              fetchTraces();
-              setSelectedTraceId(traceId);
-              console.log('[Fallback Poll] Trace', traceId, 'completed or not found');
-            } else if (status.status === 'failed') {
-              setQueuedUploads(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(String(traceId));
-                console.log('[Polling] Removed from queuedUploads:', String(traceId), Array.from(newSet));
-                return newSet;
-              });
-              setError(`Extraction failed: ${status.failedReason || 'Unknown error'}`);
-              console.log('[Fallback Poll] Trace', traceId, 'failed');
-            }
-          }
-        } catch (err) {
-          // Ignore network errors, try again next interval
-        }
-      });
-    }, 7000); // Poll every 7 seconds
-    return () => clearInterval(interval);
-  }, [queuedUploads]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -308,104 +283,37 @@ function App() {
 
   const handleAnalyze = async () => {
     if (!selectedTrace) return;
-
     setAnalyzing(true);
     setError(null);
-
     try {
       const response = await fetch(`/api/traces/${selectedTrace.id}/analyze`, {
         method: 'POST',
       });
-
       if (!response.ok) {
         const errorData = await response.json();
-
-        // If analysis already exists, show the existing analysis
         if (response.status === 400 && errorData.analysis) {
           setAnalysisResult(errorData.analysis);
-          // Refresh trace details to get updated analysis count
           await fetchTraceDetails(selectedTrace.id);
-          // Refresh trace list to update the analyzed tag in sidebar
           await fetchTraces();
           return;
         }
-
         throw new Error(errorData.error || 'Failed to analyze trace');
       }
-
-      // Add to queued analyses and start polling
-      setQueuedAnalyses(prev => new Set(prev).add(selectedTrace.id));
-      pollAnalysisJobStatus(selectedTrace.id);
-
-      // Clear any previous analysis result
+      // If analysis is queued, add to queuedAnalyses
+      const responseData = await response.json();
+      if (response.status === 202 && responseData.status === 'queued') {
+        setQueuedAnalyses(prev => {
+          const newSet = new Set(prev);
+          newSet.add(selectedTrace.id);
+          return newSet;
+        });
+      }
       setAnalysisResult(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAnalyzing(false);
     }
-  };
-
-  const pollAnalysisJobStatus = async (traceId: string) => {
-    let attempts = 0;
-    const maxAttempts = 60; // 5 minutes with 5-second intervals
-
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/traces/${traceId}/analysis-status`);
-        const status = await response.json();
-
-        if (status.status === 'completed') {
-          setQueuedAnalyses(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
-            return newSet;
-          });
-
-          // Refresh trace details to get the new analysis
-          await fetchTraceDetails(traceId);
-          // Refresh trace list to update the analyzed tag in sidebar
-          await fetchTraces();
-        } else if (status.status === 'failed') {
-          setQueuedAnalyses(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
-            return newSet;
-          });
-          setError(`Analysis failed: ${status.failedReason || 'Unknown error'}`);
-        } else if (attempts < maxAttempts) {
-          attempts++;
-          setTimeout(poll, 5000);
-        } else {
-          setQueuedAnalyses(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
-            return newSet;
-          });
-          setError('Analysis timed out. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error polling analysis status:', error);
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000);
-        } else {
-          setQueuedAnalyses(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
-            return newSet;
-          });
-          setError('Failed to check analysis status. Please refresh the page.');
-        }
-      }
-    };
-
-    // Start polling after a short delay
-    setTimeout(poll, 2000);
   };
 
   const handleDropdownToggle = (traceId: string, event: React.MouseEvent) => {

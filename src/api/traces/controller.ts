@@ -7,8 +7,8 @@ import {
     uploadObject
 } from '../../utils/s3';
 import { config } from '../../config';
-import { getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
-import {BadRequestError, NotFoundError} from '../../utils/custom-errors';
+import { getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
+import { BadRequestError, NotFoundError } from '../../utils/custom-errors';
 import { zipExtractionQueue } from '../../jobs/zip-extraction-queue';
 import { traceAnalysisQueue } from '../../jobs/trace-analysis-queue';
 
@@ -45,6 +45,7 @@ export async function uploadTrace (req: Request, res: Response) {
 
 export async function analyzeTrace (req: Request, res: Response) {
     const { id } = req.params;
+    const userId = (req as any).userId;
 
     const traceFile = await getTraceFileWithAnalysesById(id);
 
@@ -58,6 +59,7 @@ export async function analyzeTrace (req: Request, res: Response) {
 
     await traceAnalysisQueue.addJob({
         traceId: id,
+        userId,
     });
 
     return res.status(202).json({
@@ -101,18 +103,4 @@ export async function deleteTrace(req: Request, res: Response) {
     return res.status(200).json({
         message: 'Trace file deleted successfully',
     });
-}
-
-export async function getJobStatus(req: Request, res: Response) {
-    const { id } = req.params;
-    const status = await zipExtractionQueue.getJobState(id);
-
-    return res.status(200).json(status);
-}
-
-export async function getAnalysisJobStatus(req: Request, res: Response) {
-    const { id } = req.params;
-    const status = await traceAnalysisQueue.getJobState(id);
-
-    return res.status(200).json(status);
 }

@@ -7,4 +7,5 @@ export interface ExtractionJobData {
 
 export interface TraceAnalysisJobData {
     traceId: string;
+    userId: string;
 }

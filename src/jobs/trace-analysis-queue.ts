@@ -3,25 +3,25 @@ import { Job } from 'bullmq';
 import { TraceAnalysisJobData } from './types';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { analyzeTraceFile } from '../agent/test-analyzer';
-import { createTraceAnalysis } from '../api/traces/service';
+import { analyzeTraceById } from '../api/traces/service';
 import { BaseQueueManager } from './base-queue-manager';
-import { parseToJSON } from '../utils/file-manager';
+import { redisManager } from '../utils/redis';
 
 async function analysisJobHandler (job: Job<TraceAnalysisJobData>) {
-    const { traceId } = job.data;
-    try {
-        logger.info(`Starting trace analysis, trace id: ${traceId}`);
-        const result = await analyzeTraceFile(traceId);
-        const parsedResult = parseToJSON(result);
+    const { traceId, userId } = job.data;
 
-        logger.info(`Saving analysis result to database, trace id: ${traceId}`);
-        const analysis = await createTraceAnalysis({
-            traceFileId: traceId,
-            analysisJson: parsedResult,
-        });
+    try {
+        const analysis = await analyzeTraceById(traceId);
 
         logger.info(`Analysis completed, trace id: ${traceId}`);
+
+        // Publish event to Redis for WebSocket notification
+        const redisClient = redisManager.getSharedRedisClient();
+        await redisClient.publish(
+          config.websocket.ANALYSIS_COMPLETED_CHANNEL,
+          JSON.stringify({ jobId: traceId, userId, status: 'done' })
+        );
+
         return { success: true, analysis };
     } catch (error) {
         logger.error(`Analysis failed, trace id: ${traceId}`, error);

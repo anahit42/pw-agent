@@ -53,6 +53,11 @@ export const config = {
     },
   },
 
+  websocket: {
+    ANALYSIS_COMPLETED_CHANNEL: 'analysis_completed',
+    FILE_PROCESSED_CHANNEL: 'file_processed',
+  },
+
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     host: process.env.HOST || 'localhost'
