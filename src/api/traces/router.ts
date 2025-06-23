@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 
-import { analyzeTrace, uploadTrace, listTraces, getTraceWithAnalyses, deleteTrace } from './controller';
+import { analyzeTrace, uploadTrace, listTraces, getTraceWithAnalyses, deleteTrace, getAnalysisStatus } from './controller';
 import { BadRequestError } from '../../utils/custom-errors';
 import { paginationMiddleware } from '../../middlewares/pagination';
 import { analyzeRateLimiterMiddleware } from '../../middlewares/rate-limiter';
@@ -29,4 +29,5 @@ tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 tracesRouter.get('/:id', getTraceWithAnalyses);
 tracesRouter.delete('/:id', deleteTrace);
 tracesRouter.post('/:id/analyze', analyzeRateLimiterMiddleware, analyzeTrace);
+tracesRouter.get('/:id/analysis-status', getAnalysisStatus);
 

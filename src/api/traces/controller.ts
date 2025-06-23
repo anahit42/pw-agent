@@ -104,3 +104,13 @@ export async function deleteTrace(req: Request, res: Response) {
         message: 'Trace file deleted successfully',
     });
 }
+
+export async function getAnalysisStatus(req: Request, res: Response) {
+    const { id } = req.params;
+    try {
+        const jobState = await traceAnalysisQueue.getJobState(id);
+        return res.status(200).json(jobState);
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to get analysis status' });
+    }
+}

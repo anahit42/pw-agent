@@ -44,6 +44,7 @@ function App() {
   const socketRef = useRef<Socket | null>(null);
   const userId = 'hardcodedUserId'; // Should match backend authMiddleware
   const uploadLock = useRef(false);
+  const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
@@ -130,9 +131,45 @@ function App() {
       }
       const data = await res.json();
       setSelectedTrace(data);
+      // Fetch analysis status if no analysis exists
+      if (!data.analyses || data.analyses.length === 0) {
+        try {
+          const statusRes = await fetch(`/api/traces/${id}/analysis-status`);
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            if (statusData.status === 'active' || statusData.status === 'waiting' || statusData.status === 'delayed' || statusData.status === 'queued' || statusData.status === 'waiting-children') {
+              setAnalysisStatus('processing');
+              setQueuedAnalyses(prev => {
+                const newSet = new Set(prev);
+                newSet.add(id);
+                return newSet;
+              });
+            } else {
+              setAnalysisStatus(null);
+              setQueuedAnalyses(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+              });
+            }
+          } else {
+            setAnalysisStatus(null);
+          }
+        } catch {
+          setAnalysisStatus(null);
+        }
+      } else {
+        setAnalysisStatus(null);
+        setQueuedAnalyses(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }
     } catch (err: any) {
       setError(err.message);
       setSelectedTrace(null);
+      setAnalysisStatus(null);
     }
   };
 
@@ -609,7 +646,7 @@ function App() {
                   {/* Analysis button removed - only one analysis allowed per trace */}
                 </div>
               </div>
-            ) : queuedAnalyses.has(selectedTrace.id) ? (
+            ) : (queuedAnalyses.has(selectedTrace.id) || analysisStatus === 'processing') ? (
               <div className="analysis-loading">
                 <div className="analysis-loading-content">
                   <div className="analysis-loading-icon">
