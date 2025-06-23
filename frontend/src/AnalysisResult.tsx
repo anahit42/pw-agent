@@ -37,69 +37,68 @@ const rowStyle: React.CSSProperties = {
   marginBottom: 10,
 };
 
-const cardStyle: React.CSSProperties = {
+const sectionCardStyle: React.CSSProperties = {
   background: '#232a3a',
-  borderRadius: 12,
-  boxShadow: '0 2px 8px rgba(10,16,32,0.10)',
-  padding: 20,
-  marginBottom: 18,
+  borderRadius: 14,
+  boxShadow: '0 2px 8px rgba(10,16,32,0.08)',
+  padding: 22,
+  marginBottom: 22,
+  border: '1px solid #232a3a',
   maxWidth: 700,
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-  color: '#7ecfff',
-  fontWeight: 700,
-  fontSize: '1.08em',
-  margin: '10px 0 14px 0',
-  letterSpacing: 0.2,
+  color: '#a3c9e8',
+  fontWeight: 600,
+  fontSize: '1.07em',
+  margin: '8px 0 10px 0',
+  letterSpacing: 0.1,
   display: 'flex',
   alignItems: 'center',
   gap: 6,
 };
 
 const failureSectionStyle: React.CSSProperties = {
-  background: 'rgba(176,0,32,0.10)',
-  borderRadius: 10,
-  padding: '16px 18px',
-  margin: '18px 0',
-  boxShadow: '0 2px 8px rgba(176,0,32,0.08)',
-  borderLeft: '4px solid #b00020',
+  ...sectionCardStyle,
+  background: 'rgba(176,0,32,0.04)',
+  boxShadow: '0 1px 4px rgba(176,0,32,0.04)',
+  borderLeft: '2px solid #b36a6a',
+  paddingLeft: 26,
 };
 
 const failureTitleStyle: React.CSSProperties = {
-  color: '#ff4d6d',
-  fontWeight: 800,
-  fontSize: '1.13em',
-  marginBottom: 10,
+  color: '#e07a88',
+  fontWeight: 700,
+  fontSize: '1.08em',
+  marginBottom: 8,
   display: 'flex',
   alignItems: 'center',
   gap: 8,
 };
 
 const failureBlockStyle: React.CSSProperties = {
-  fontWeight: 600,
-  fontSize: '1.08em',
+  fontWeight: 500,
+  fontSize: '1.04em',
   color: '#e0e6f0',
-  marginBottom: 8,
+  marginBottom: 6,
   display: 'flex',
   alignItems: 'center',
   gap: 8,
 };
 
 const stackSectionStyle: React.CSSProperties = {
-  background: 'rgba(126,207,255,0.08)',
-  borderRadius: 10,
-  padding: '16px 18px',
-  margin: '18px 0',
-  boxShadow: '0 2px 8px rgba(126,207,255,0.07)',
-  borderLeft: '4px solid #7ecfff',
+  ...sectionCardStyle,
+  background: 'rgba(126,207,255,0.04)',
+  boxShadow: '0 1px 4px rgba(126,207,255,0.04)',
+  borderLeft: '2px solid #7ecfff',
+  paddingLeft: 26,
 };
 
 const stackBlockStyle: React.CSSProperties = {
-  fontWeight: 600,
-  fontSize: '1.08em',
+  fontWeight: 500,
+  fontSize: '1.04em',
   color: '#e0e6f0',
-  marginBottom: 8,
+  marginBottom: 6,
   display: 'flex',
   alignItems: 'center',
   gap: 8,
@@ -108,13 +107,17 @@ const stackBlockStyle: React.CSSProperties = {
 function AnalysisResult({ analysis, analyzedAt }: { analysis: Analysis, analyzedAt: string }) {
   const { analysisJson } = analysis;
   return (
-    <div style={cardStyle}>
-      <div style={sectionTitleStyle}>
-        <span role="img" aria-label="summary">📝</span> Summary
+    <div style={{display: 'flex', flexDirection: 'column', gap: 0}}>
+      {/* Summary Section (not a card) */}
+      <div style={{marginBottom: 18}}>
+        <div style={sectionTitleStyle}>
+          <span role="img" aria-label="summary">📝</span> Summary
+        </div>
+        <div style={rowStyle}>
+          <span style={summaryValueStyle}>{analysisJson.summary || <i>No summary</i>}</span>
+        </div>
       </div>
-      <div style={rowStyle}>
-        <span style={summaryValueStyle}>{analysisJson.summary || <i>No summary</i>}</span>
-      </div>
+      {/* Failure Details Card */}
       <div style={failureSectionStyle}>
         <div style={failureTitleStyle}>
           <span role="img" aria-label="failed step">❌</span> Failure Details
@@ -132,6 +135,7 @@ function AnalysisResult({ analysis, analyzedAt }: { analysis: Analysis, analyzed
           {analysisJson.networkIssues || <i>Network Issues: none</i>}
         </div>
       </div>
+      {/* Stack & Correlation Card */}
       <div style={stackSectionStyle}>
         <div style={sectionTitleStyle}>
           <span role="img" aria-label="stack">🧩</span> Stack & Correlation
@@ -145,14 +149,18 @@ function AnalysisResult({ analysis, analyzedAt }: { analysis: Analysis, analyzed
           {analysisJson.correlatedEvents || <i>Correlation: None</i>}
         </div>
       </div>
-      <div style={sectionTitleStyle}>
-        <span role="img" aria-label="bulb">💡</span> Suggestions
+      {/* Suggestions Section (not a card) */}
+      <div style={{margin: '22px 0 0 0'}}>
+        <div style={sectionTitleStyle}>
+          <span role="img" aria-label="bulb">💡</span> Suggestions
+        </div>
+        <div style={rowStyle}>
+          <span style={valueStyle}>{analysisJson.suggestions || <i>None</i>}</span>
+        </div>
       </div>
-      <div style={rowStyle}>
-        <span style={valueStyle}>{analysisJson.suggestions || <i>None</i>}</span>
-      </div>
-      <div style={{...rowStyle, marginTop: 18, fontSize: '0.95em', color: '#8fa1c7'}}>
-        <span style={{fontWeight: 500}}>Analyzed At:</span>
+      {/* Analyzed At (subtle, bottom) */}
+      <div style={{...rowStyle, marginTop: 18, fontSize: '0.95em', color: '#8fa1c7', justifyContent: 'flex-end'}}>
+        <span style={{fontWeight: 400}}>Analyzed At:</span>
         <span style={{marginLeft: 8}}>{analyzedAt}</span>
       </div>
     </div>
