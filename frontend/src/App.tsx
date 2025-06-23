@@ -4,6 +4,7 @@ import './App.css';
 import { type Analysis } from './AnalysisResult';
 import { io, Socket } from 'socket.io-client';
 import TraceDetails from './TraceDetails';
+import ErrorPopup from './ErrorPopup';
 
 interface TraceFile {
   id: string;
@@ -239,12 +240,38 @@ function App() {
       }
     });
 
+    socket.on('jobError', (data: any) => {
+      if (data && data.jobId && data.status === 'error') {
+        let jobTypeLabel = data.jobCategory === 'analysis' ? 'Analysis' : 'Extraction';
+        setError(`${jobTypeLabel} failed for trace ${data.jobId}: ${data.error}`);
+        if (data.jobCategory === 'analysis') {
+          setQueuedAnalyses(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(String(data.jobId));
+            return newSet;
+          });
+        } else {
+          setQueuedUploads(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(String(data.jobId));
+            return newSet;
+          });
+        }
+      }
+    });
+
     return () => {
       socket.disconnect();
       (socketRef.current as any)._handlerRegistered = false;
     };
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    const timeout = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timeout);
+  }, [error]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -431,6 +458,7 @@ function App() {
 
   return (
     <div className="chatgpt-layout">
+      <ErrorPopup error={error || ''} onClose={() => setError(null)} />
       <aside className="sidebar">
         <div className="sidebar-header">
           <span aria-label="rocket" style={{display: 'flex', alignItems: 'center', marginRight: 6}}>
@@ -594,7 +622,6 @@ function App() {
         <div className="product-description" style={{ marginBottom: 24, color: '#b0bad6', fontSize: '1.1em' }}>
           <b>AI-powered Playwright trace analyzer:</b> Upload, analyze, and debug your Playwright test traces with ease.
         </div>
-        {error && <div className="error">{error}</div>}
         {selectedTrace ? (
           <TraceDetails
             selectedTrace={selectedTrace}

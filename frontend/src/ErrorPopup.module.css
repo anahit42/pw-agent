@@ -1,0 +1,60 @@
+.error-popup {
+  position: fixed;
+  bottom: 32px;
+  left: 32px;
+  z-index: 10000;
+  background: #eaf3fb;
+  color: #174ea6;
+  padding: 18px 32px 18px 20px;
+  border-radius: 14px;
+  box-shadow: 0 6px 32px rgba(23,78,166,0.10);
+  min-width: 280px;
+  max-width: 420px;
+  font-size: 1.05em;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-left: 6px solid #1976d2;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  letter-spacing: 0.1px;
+  animation: error-popup-fade-in 0.2s;
+}
+
+@keyframes error-popup-fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.error-popup__icon {
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  margin-right: 8px;
+}
+
+.error-popup__message {
+  flex: 1;
+  color: #174ea6;
+  font-weight: 500;
+}
+
+.error-popup__close {
+  background: none;
+  border: none;
+  color: #174ea6;
+  font-size: 22px;
+  cursor: pointer;
+  margin-left: 8px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.error-popup__close:hover,
+.error-popup__close:focus {
+  background: #dbeafe;
+} 

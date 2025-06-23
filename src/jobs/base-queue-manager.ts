@@ -1,6 +1,7 @@
 import { Queue, Worker, Job, QueueOptions } from 'bullmq';
 import { logger } from '../utils/logger';
 import { config } from '../config';
+import { redisManager } from '../utils/redis';
 
 export interface BaseQueueManagerOptions<JobData> {
     queueName: string;
@@ -53,9 +54,28 @@ export class BaseQueueManager<JobData> {
                 logger.info(`${this.options.queueName} job ${job.id} completed`);
             });
 
-            this.worker.on('failed', (job: any, err: Error) => {
+            this.worker.on('failed', async (job: any, err: Error) => {
                 if (job) {
                     logger.error(`${this.options.queueName} job ${job.id} failed:`, err.message);
+                    // Emit error event if this was the last attempt
+                    if (job.attemptsMade >= (job.opts.attempts || 1)) {
+                        try {
+                            const redisClient = redisManager.getSharedRedisClient();
+                            await redisClient.publish(
+                                config.websocket.JOB_ERROR_CHANNEL,
+                                JSON.stringify({
+                                    jobType: this.options.queueName,
+                                    jobId: job.data.traceId,
+                                    userId: job.data.userId,
+                                    status: 'error',
+                                    error: err.message,
+                                    jobCategory: this.options.queueName.includes('analysis') ? 'analysis' : 'extraction',
+                                })
+                            );
+                        } catch (e) {
+                            logger.error('Failed to publish job error event', e);
+                        }
+                    }
                 }
             });
 

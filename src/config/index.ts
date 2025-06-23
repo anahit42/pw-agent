@@ -56,6 +56,7 @@ export const config = {
   websocket: {
     ANALYSIS_COMPLETED_CHANNEL: 'analysis_completed',
     FILE_PROCESSED_CHANNEL: 'file_processed',
+    JOB_ERROR_CHANNEL: 'job_error',
   },
 
   server: {

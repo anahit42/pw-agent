@@ -20,6 +20,7 @@ export function initWebsockets(httpServer: HttpServer) {
 
   redisSubscriber.subscribe(config.websocket.ANALYSIS_COMPLETED_CHANNEL);
   redisSubscriber.subscribe(config.websocket.FILE_PROCESSED_CHANNEL);
+  redisSubscriber.subscribe(config.websocket.JOB_ERROR_CHANNEL);
 
   redisSubscriber.on('message', (channel, message) => {
     if (channel === config.websocket.FILE_PROCESSED_CHANNEL) {
@@ -32,6 +33,12 @@ export function initWebsockets(httpServer: HttpServer) {
       const data = JSON.parse(message);
       if (data.userId) {
         io.to(data.userId).emit('analysisCompleted', data);
+        logger.info(`Message sent to ${channel}`);
+      }
+    } else if (channel === config.websocket.JOB_ERROR_CHANNEL) {
+      const data = JSON.parse(message);
+      if (data.userId) {
+        io.to(data.userId).emit('jobError', data);
         logger.info(`Message sent to ${channel}`);
       }
     }
