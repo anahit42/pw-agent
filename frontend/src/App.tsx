@@ -240,10 +240,16 @@ function App() {
       }
     });
 
-    socket.on('jobError', (data: any) => {
+    socket.on('jobError', (data: {
+      jobType: string;
+      jobId: string;
+      userId: string;
+      status: 'error',
+      error: string;
+      jobCategory: string;
+    }) => {
       if (data && data.jobId && data.status === 'error') {
-        let jobTypeLabel = data.jobCategory === 'analysis' ? 'Analysis' : 'Extraction';
-        setError(`${jobTypeLabel} failed for trace ${data.jobId}: ${data.error}`);
+        setError(`${data.error}`);
         if (data.jobCategory === 'analysis') {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);

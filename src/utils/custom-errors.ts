@@ -33,4 +33,10 @@ export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(message, 403);
   }
+}
+
+export class RateLimitError extends AppError {
+  constructor(message = 'Rate limit exceeded, please try again later') {
+    super(message, 429);
+  }
 } 

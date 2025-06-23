@@ -15,7 +15,7 @@ import {
 
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { AppError } from '../utils/custom-errors';
+import { AppError, RateLimitError } from '../utils/custom-errors';
 
 import { getTraceFiles } from './tools';
 
@@ -144,10 +144,23 @@ Trace file id: ${traceFileId}`
             { recursionLimit: 10, configurable: { thread_id: traceFileId } }
         );
         return finalState.messages[finalState.messages.length - 1].content;
-    } catch (error) {
+    } catch (error: any) {
         logger.error(`Error during langgraph analysis for traceFileId ${traceFileId}:`, error);
+        // Detect rate limit error (429)
+        const message = error?.message || '';
+        if (
+            error?.statusCode === 429 ||
+            message.includes('429') ||
+            message.toLowerCase().includes('rate limit') ||
+            message.toLowerCase().includes('quota')
+        ) {
+            throw new RateLimitError(
+                'Analysis temporarily unavailable due to rate limiting. Please try again later.'
+            );
+        }
+
         throw new AppError(
-            `LangGraph analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Analysis failed: ${message.split('\n')[0]}`,
             500
         );
     }
