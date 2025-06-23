@@ -31,7 +31,7 @@ npm install
 
 ### 3. Set up environment variables
 
-Create a `.env` file in the root directory with the content from .env.example file:
+Create a `.env` file in the root directory with the content from `.env.example` file. Add  your OpenAI API key.
 
 ```env
 OPENAI_API_KEY=your-openai-api-key
@@ -39,7 +39,7 @@ OPENAI_API_KEY=your-openai-api-key
 ...
 ```
 
-### 4. Start services (MinIO & PostgreSQL)
+### 4. Start services (MinIO, PostgreSQL, Redis)
 
 ```bash
 docker-compose up -d
@@ -47,7 +47,7 @@ docker-compose up -d
 
 ### 5. Set up the database
 
-Run Prisma migrations and generate the client:
+Run Prisma migrations and generate the client (for TS types):
 
 ```bash
 npm run init-db
@@ -72,13 +72,12 @@ npm run dev
 The UI will start at [http://localhost:5173](http://localhost:5173).
 
 
-## Scripts
-
-- `npm run dev` — Start the server in development mode
-- `npm test` — Run tests
-
 ## Development
 
-- Source code is in the `src/` directory.
+- Backend source code is in the `src/` directory
+- Frontend source code is in `frontend/` directory
 - Database schema is managed with Prisma (`prisma/schema.prisma`).
 
+## Production Readiness
+
+See [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) for a comprehensive production readiness checklist and best practices
