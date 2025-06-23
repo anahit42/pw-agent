@@ -1,4 +1,5 @@
 import unzipper from 'unzipper';
+import { AppError } from './custom-errors';
 
 export async function extractTraceFiles(buffer: Buffer, fileNames: string[]): Promise<Record<string, Buffer>> {
     const results: Record<string, Buffer> = {};
@@ -14,4 +15,15 @@ export async function extractTraceFiles(buffer: Buffer, fileNames: string[]): Pr
     }
 
     return results
+}
+
+export function parseToJSON(result: unknown): Record<string, unknown> {
+    let parsedResult;
+    try {
+        parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+    } catch (e) {
+        throw new AppError('Failed to parse analysis result');
+    }
+
+    return parsedResult;
 }

@@ -5,6 +5,7 @@ import { analyzeTrace, uploadTrace, listTraces, getTraceWithAnalyses, deleteTrac
 import { BadRequestError } from '../../utils/custom-errors';
 import { paginationMiddleware } from '../../middlewares/pagination';
 import { analyzeRateLimiterMiddleware } from '../../middlewares/rate-limiter';
+import { authMiddleware } from '../../middlewares/auth';
 
 export const tracesRouter = Router();
 
@@ -22,6 +23,7 @@ const upload = multer({
     }
 });
 
+tracesRouter.use(authMiddleware);
 tracesRouter.get('/', paginationMiddleware, listTraces);
 tracesRouter.post('/upload', upload.single('trace'), uploadTrace);
 tracesRouter.get('/:id', getTraceWithAnalyses);

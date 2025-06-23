@@ -5,14 +5,9 @@ import cors from 'cors';
 import { requestLoggerMiddleware } from './middlewares/request-logger';
 import { finalErrorHandlerMiddleware } from './middlewares/error-handler';
 import { tracesRouter } from './api/traces/router';
-import { initExtractionWorker } from './utils/queue/zip-extraction-queue';
-import { initAnalysisWorker } from './utils/queue/trace-analysis-queue';
 
 export function initApp() {
   const app = express();
-
-  initExtractionWorker();
-  initAnalysisWorker();
 
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));

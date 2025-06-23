@@ -4,56 +4,63 @@ import { config } from '../config';
 import { logger } from './logger';
 
 class RedisManager {
-    private static instance: RedisManager;
-    private redisClient: Redis | null = null;
+    private sharedRedisClient: Redis | null = null;
 
-    private constructor() {}
+    public constructor() {}
 
-    public static getInstance(): RedisManager {
-        if (!RedisManager.instance) {
-            RedisManager.instance = new RedisManager();
+    /**
+     * Returns a singleton shared Redis client for general commands and publishing.
+     */
+    public getSharedRedisClient(): Redis {
+        if (!this.sharedRedisClient) {
+            this.sharedRedisClient = RedisManager.createNewRedisClient('shared');
         }
-        return RedisManager.instance;
+
+        return this.sharedRedisClient;
     }
 
-    public getRedisClient(): Redis {
-        if (!this.redisClient) {
-            this.redisClient = new Redis({
-                host: config.redis.host,
-                port: config.redis.port,
-                password: config.redis.password,
-                maxRetriesPerRequest: null,
-            });
+    public static createNewRedisClient(connectionName: string): Redis {
+        const client =  new Redis({
+            host: config.redis.host,
+            port: config.redis.port,
+            password: config.redis.password,
+            maxRetriesPerRequest: null,
+        });
 
-            this.redisClient.on('connect', () => {
-                logger.info('Redis connected successfully');
-            });
+        client.on('connect', () => {
+            logger.info(`Redis ${connectionName} connection initiated successfully`);
+        });
 
-            this.redisClient.on('error', (error) => {
-                logger.error('Redis connection error:', error);
-            });
+        client.on('error', (error) => {
+            logger.error(`Redis ${connectionName} connection error:`, error);
+        });
 
-            this.redisClient.on('close', () => {
-                logger.info('Redis connection closed');
-            });
+        client.on('close', () => {
+            logger.info(`Redis ${connectionName} connection closed`);
+        });
 
-            this.redisClient.on('reconnecting', () => {
-                logger.info('Redis reconnecting...');
-            });
-        }
+        client.on('reconnecting', () => {
+            logger.info(`Redis ${connectionName} connection reconnecting`);
+        });
 
-        return this.redisClient;
+        return client;
     }
 
     public async closeConnection(): Promise<void> {
-        if (this.redisClient) {
-            await this.redisClient.quit();
-            this.redisClient = null;
+        if (this.sharedRedisClient) {
+            await this.sharedRedisClient.quit();
+            this.sharedRedisClient = null;
             logger.info('Redis connection closed');
         }
     }
 }
 
-export const redisManager = RedisManager.getInstance();
+export const redisManager = new RedisManager();
 
-export const getRedisClient = (): Redis => redisManager.getRedisClient();
+export function getSharedRedisClient() {
+    return redisManager.getSharedRedisClient()
+}
+
+export function createNewRedisClient(connectionName: string) {
+    return RedisManager.createNewRedisClient(connectionName);
+}

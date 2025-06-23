@@ -9,8 +9,8 @@ import {
 import { config } from '../../config';
 import { getTraceFileById, analyzeTraceById, getAllTraceFiles, getTraceFileWithAnalysesById, deleteTraceFileById } from './service';
 import {BadRequestError, NotFoundError} from '../../utils/custom-errors';
-import { addExtractionJob, getExtractionJobState } from '../../utils/queue/zip-extraction-queue';
-import { addAnalysisJob, getAnalysisJobState } from '../../utils/queue/trace-analysis-queue';
+import { zipExtractionQueue } from '../../jobs/zip-extraction-queue';
+import { traceAnalysisQueue } from '../../jobs/trace-analysis-queue';
 
 export async function uploadTrace (req: Request, res: Response) {
     if (!req.file) {
@@ -20,6 +20,7 @@ export async function uploadTrace (req: Request, res: Response) {
     const traceId = generateUID();
     const { buffer, mimetype, originalname } = req.file;
     const s3Key = generateOriginalTraceFilePath(traceId);
+    const userId = (req as any).userId;
 
     await createBucketIfNotExists(config.s3.bucketName);
     await uploadObject({
@@ -28,10 +29,11 @@ export async function uploadTrace (req: Request, res: Response) {
         data: buffer,
         contentType: mimetype,
     });
-    await addExtractionJob({
+    await zipExtractionQueue.addJob({
         traceId,
         originalFileName: originalname,
-        s3Key
+        s3Key,
+        userId,
     });
 
     return res.status(202).json({
@@ -54,7 +56,7 @@ export async function analyzeTrace (req: Request, res: Response) {
         throw new BadRequestError('Analysis already exists for this trace file');
     }
 
-    await addAnalysisJob({
+    await traceAnalysisQueue.addJob({
         traceId: id,
     });
 
@@ -103,14 +105,14 @@ export async function deleteTrace(req: Request, res: Response) {
 
 export async function getJobStatus(req: Request, res: Response) {
     const { id } = req.params;
-    const status = await getExtractionJobState(id);
+    const status = await zipExtractionQueue.getJobState(id);
 
     return res.status(200).json(status);
 }
 
 export async function getAnalysisJobStatus(req: Request, res: Response) {
     const { id } = req.params;
-    const status = await getAnalysisJobState(id);
+    const status = await traceAnalysisQueue.getJobState(id);
 
     return res.status(200).json(status);
 }

@@ -53,7 +53,7 @@ export const config = {
         removeOnComplete: 100,
         removeOnFail: 50,
       },
-      concurrency: 2,
+      concurrency: 1,
     },
   },
 

@@ -1,30 +1,40 @@
+import { createServer } from 'http';
+
 import { config } from './config';
 import { logger } from './utils/logger';
 import { initApp } from './app';
-import { cleanupExtractionQueue } from './utils/queue/zip-extraction-queue';
-import { cleanupAnalysisQueue } from './utils/queue/trace-analysis-queue';
+import { initWebsockets } from './websocket';
+import { zipExtractionQueue } from './jobs/zip-extraction-queue';
+import { traceAnalysisQueue } from './jobs/trace-analysis-queue';
 import { redisManager } from './utils/redis';
 
 const { port, host } = config.server;
 const app = initApp();
+const httpServer = createServer(app);
+initWebsockets(httpServer);
+zipExtractionQueue.initWorker();
+traceAnalysisQueue.initWorker();
 
-app.listen(port, host, () => {
+httpServer.listen(port, host, () => {
   logger.info(`Server running at http://${host}:${port}`);
 });
 
-process.on('SIGTERM', async () => {
+async function shutDown() {
   logger.info('Shutting down server gracefully...');
-  await cleanupExtractionQueue();
-  await cleanupAnalysisQueue();
+  await Promise.all([
+    zipExtractionQueue.cleanup(),
+    traceAnalysisQueue.cleanup(),
+  ]);
   await redisManager.closeConnection();
+}
+
+process.on('SIGTERM', async () => {
+  await shutDown();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  logger.info('Shutting down server gracefully...');
-  await cleanupExtractionQueue();
-  await cleanupAnalysisQueue();
-  await redisManager.closeConnection();
+  await shutDown();
   process.exit(0);
 });
 
