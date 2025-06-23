@@ -57,10 +57,6 @@ class RedisManager {
 
 export const redisManager = new RedisManager();
 
-export function getSharedRedisClient() {
-    return redisManager.getSharedRedisClient()
-}
-
 export function createNewRedisClient(connectionName: string) {
     return RedisManager.createNewRedisClient(connectionName);
 }

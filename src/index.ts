@@ -14,6 +14,7 @@ const httpServer = createServer(app);
 initWebsockets(httpServer);
 zipExtractionQueue.initWorker();
 traceAnalysisQueue.initWorker();
+redisManager.getSharedRedisClient();
 
 httpServer.listen(port, host, () => {
   logger.info(`Server running at http://${host}:${port}`);

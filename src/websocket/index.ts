@@ -2,6 +2,7 @@ import { Server as WebsocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 
 import { createNewRedisClient } from '../utils/redis';
+import { logger } from '../utils/logger';
 
 export function initWebsockets(httpServer: HttpServer) {
   const io = new WebsocketServer(httpServer, { cors: { origin: '*' } });
@@ -13,7 +14,7 @@ export function initWebsockets(httpServer: HttpServer) {
     const userId = socket.handshake.query.userId as string;
     if (userId) {
       socket.join(userId);
-      console.log(`Socket ${socket.id} joined room ${userId}`);
+      logger.info(`Socket ${socket.id} joined room ${userId}`);
     }
   });
 
@@ -24,6 +25,7 @@ export function initWebsockets(httpServer: HttpServer) {
       const data = JSON.parse(message);
       if (data.userId) {
         io.to(data.userId).emit('fileProcessed', data);
+        logger.info(`Message sent to ${channel}`);
       }
     }
   });

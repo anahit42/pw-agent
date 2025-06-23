@@ -7,7 +7,7 @@ import { uploadObject, downloadObject } from '../utils/s3';
 import { extractTraceFiles } from '../utils/file-manager';
 import { createTraceFile } from '../api/traces/service';
 import { BaseQueueManager } from './base-queue-manager';
-import { getSharedRedisClient } from '../utils/redis';
+import { redisManager } from '../utils/redis';
 
 async function extractionJobHandler (job: Job<ExtractionJobData>) {
     logger.info(`[DEBUG] extractionJobHandler called for job: ${job.id}, data: ${JSON.stringify(job.data)}`);
@@ -42,7 +42,7 @@ async function extractionJobHandler (job: Job<ExtractionJobData>) {
         logger.info(`Extraction completed, trace id: ${traceId}`);
 
         // Publish event to Redis for WebSocket notification
-        const redisClient = getSharedRedisClient();
+        const redisClient = redisManager.getSharedRedisClient();
         await redisClient.publish(
           'file_processed',
           JSON.stringify({ jobId: traceId, userId, status: 'done' })

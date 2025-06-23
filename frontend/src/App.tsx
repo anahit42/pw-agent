@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
 import AnalysisResult, { type Analysis } from './AnalysisResult';
+import { io, Socket } from 'socket.io-client';
 
 interface TraceFile {
   id: string;
@@ -40,6 +41,9 @@ function App() {
   const [traceToDelete, setTraceToDelete] = useState<string | null>(null);
   const [queuedUploads, setQueuedUploads] = useState<Set<string>>(new Set());
   const [queuedAnalyses, setQueuedAnalyses] = useState<Set<string>>(new Set());
+  const socketRef = useRef<Socket | null>(null);
+  const userId = 'hardcodedUserId'; // Should match backend authMiddleware
+  const uploadLock = useRef(false);
 
   const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
     const groups: { [key: string]: TraceFile[] } = {};
@@ -97,6 +101,22 @@ function App() {
       if (!selectedTraceId && data.traces && data.traces.length > 0) {
         setSelectedTraceId(data.traces[0].id);
       }
+      // Clean up queuedUploads for traces that are now present
+      setQueuedUploads(prev => {
+        const traceIds = new Set((data.traces || []).map((t: TraceFile) => String(t.id)));
+        const newSet = new Set(prev);
+        let changed = false;
+        for (const id of prev) {
+          if (traceIds.has(id)) {
+            newSet.delete(id);
+            changed = true;
+          }
+        }
+        if (changed) {
+          console.log('[fetchTraces] Cleaned up queuedUploads:', Array.from(newSet));
+        }
+        return newSet;
+      });
     } catch (err) {
       setError('Failed to fetch trace files');
     }
@@ -141,6 +161,82 @@ function App() {
     // eslint-disable-next-line
   }, [selectedTraceId]);
 
+  useEffect(() => {
+    // Prevent duplicate socket event handler registration
+    if (socketRef.current && (socketRef.current as any)._handlerRegistered) return;
+    // Connect to websocket server
+    const socket = io('http://localhost:3000', {
+      path: '/socket.io',
+      query: { userId },
+      transports: ['websocket'],
+    });
+    socketRef.current = socket;
+    (socketRef.current as any)._handlerRegistered = true;
+
+    socket.on('connect', () => {
+      // console.log('WebSocket connected');
+    });
+
+    socket.on('fileProcessed', (data: any) => {
+      console.log('[WebSocket] fileProcessed event:', data);
+      if (data && data.jobId && data.status === 'done') {
+        setQueuedUploads(prev => {
+          console.log('[WebSocket] Current queuedUploads before removal:', Array.from(prev));
+          const newSet = new Set(prev);
+          newSet.delete(String(data.jobId));
+          console.log('[WebSocket] Removed from queuedUploads:', String(data.jobId), Array.from(newSet));
+          return newSet;
+        });
+        fetchTraces();
+        setSelectedTraceId(data.jobId);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      (socketRef.current as any)._handlerRegistered = false;
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  // Fallback polling for stuck uploads
+  useEffect(() => {
+    if (queuedUploads.size === 0) return;
+    const interval = setInterval(() => {
+      queuedUploads.forEach(async (traceId) => {
+        try {
+          const response = await fetch(`${API_BASE}/${traceId}/upload-status`);
+          if (response.ok) {
+            const status = await response.json();
+            if (status.status === 'completed' || status.status === 'not_found') {
+              setQueuedUploads(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(String(traceId));
+                console.log('[Polling] Removed from queuedUploads:', String(traceId), Array.from(newSet));
+                return newSet;
+              });
+              fetchTraces();
+              setSelectedTraceId(traceId);
+              console.log('[Fallback Poll] Trace', traceId, 'completed or not found');
+            } else if (status.status === 'failed') {
+              setQueuedUploads(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(String(traceId));
+                console.log('[Polling] Removed from queuedUploads:', String(traceId), Array.from(newSet));
+                return newSet;
+              });
+              setError(`Extraction failed: ${status.failedReason || 'Unknown error'}`);
+              console.log('[Fallback Poll] Trace', traceId, 'failed');
+            }
+          }
+        } catch (err) {
+          // Ignore network errors, try again next interval
+        }
+      });
+    }, 7000); // Poll every 7 seconds
+    return () => clearInterval(interval);
+  }, [queuedUploads]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -156,8 +252,14 @@ function App() {
   };
 
   const handleUpload = async (e: FormEvent) => {
+    console.log('handleUpload called');
     e.preventDefault();
-    if (!file) return;
+    if (uploadLock.current) return;
+    uploadLock.current = true;
+    if (!file) {
+      uploadLock.current = false;
+      return;
+    }
     setUploading(true);
     setError(null);
     setShowUploadLoader(false);
@@ -178,15 +280,16 @@ function App() {
       const responseData = await res.json();
 
       if (res.status === 202 && responseData.status === 'queued') {
-        // File uploaded and queued for processing
-        setQueuedUploads(prev => new Set(prev).add(responseData.traceId));
+        setQueuedUploads(prev => {
+          if (prev.has(String(responseData.traceId))) return prev;
+          const newSet = new Set(prev);
+          newSet.add(String(responseData.traceId));
+          console.log('[Upload] Added to queuedUploads:', String(responseData.traceId), Array.from(newSet));
+          return newSet;
+        });
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-
-        // Start polling for job status
-        pollJobStatus(responseData.traceId);
       } else {
-        // Legacy response format (should not happen with new flow)
         const { trace: newTrace } = responseData;
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -199,82 +302,8 @@ function App() {
       if (loaderTimeout) clearTimeout(loaderTimeout);
       setUploading(false);
       setShowUploadLoader(false);
+      uploadLock.current = false;
     }
-  };
-
-  const pollJobStatus = async (traceId: string) => {
-    const maxAttempts = 60; // 5 minutes with 5-second intervals
-    let attempts = 0;
-
-    const poll = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/${traceId}/upload-status`);
-        if (response.ok) {
-          const status = await response.json();
-
-          if (status.status === 'completed') {
-            // Job completed successfully
-            setQueuedUploads(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(traceId);
-              return newSet;
-            });
-            await fetchTraces(); // Refresh the traces list
-            setSelectedTraceId(traceId);
-            return;
-          } else if (status.status === 'failed') {
-            // Job failed
-            setQueuedUploads(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(traceId);
-              return newSet;
-            });
-            setError(`Extraction failed: ${status.failedReason || 'Unknown error'}`);
-            return;
-          } else if (status.status === 'not_found') {
-            // Job not found (might have been completed already)
-            setQueuedUploads(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(traceId);
-              return newSet;
-            });
-            await fetchTraces(); // Refresh the traces list
-            setSelectedTraceId(traceId);
-            return;
-          }
-        }
-
-        // Continue polling if job is still in progress
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000); // Poll every 5 seconds
-        } else {
-          // Timeout
-          setQueuedUploads(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            return newSet;
-          });
-          setError('Extraction timed out. Please check the trace status later.');
-        }
-      } catch (error) {
-        console.error('Error polling job status:', error);
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000);
-        } else {
-          setQueuedUploads(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(traceId);
-            return newSet;
-          });
-          setError('Failed to check extraction status. Please refresh the page.');
-        }
-      }
-    };
-
-    // Start polling after a short delay
-    setTimeout(poll, 2000);
   };
 
   const handleAnalyze = async () => {
@@ -330,6 +359,7 @@ function App() {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);
             newSet.delete(traceId);
+            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
             return newSet;
           });
 
@@ -341,6 +371,7 @@ function App() {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);
             newSet.delete(traceId);
+            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
             return newSet;
           });
           setError(`Analysis failed: ${status.failedReason || 'Unknown error'}`);
@@ -351,6 +382,7 @@ function App() {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);
             newSet.delete(traceId);
+            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
             return newSet;
           });
           setError('Analysis timed out. Please try again.');
@@ -364,6 +396,7 @@ function App() {
           setQueuedAnalyses(prev => {
             const newSet = new Set(prev);
             newSet.delete(traceId);
+            console.log('[Polling] Removed from queuedAnalyses:', String(traceId), Array.from(newSet));
             return newSet;
           });
           setError('Failed to check analysis status. Please refresh the page.');
@@ -512,7 +545,7 @@ function App() {
           </div>
 
           {file && !uploading && (
-            <button type="submit" className="sidebar-upload-btn">
+            <button type="submit" className="sidebar-upload-btn" disabled={uploading}>
               Upload
             </button>
           )}
