@@ -537,7 +537,6 @@ function App() {
                     setSelectedTraceId(trace.id);
                     setAnalysisResult(null);
                     setError(null);
-                    fetchTraceDetails(trace.id);
                   }}
                 >
                   <div className="trace-item-icon">
