@@ -122,7 +122,7 @@ export class BaseQueueManager<JobData> {
          * true = do not wait for current jobs to finish
          */
         if (this.worker) {
-            await this.worker.close();
+            await this.worker.close(true);
         }
 
         /**

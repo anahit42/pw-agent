@@ -11,6 +11,10 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 import { AppError } from '../utils/custom-errors';
 
+export const getTraceFilesSchema = z.object({
+    traceFileId: z.string().describe('Trace file id'),
+});
+
 export const getTraceFiles = tool(async ({ traceFileId }) => {
     try {
         logger.info(`Downloading all trace files for file: ${traceFileId}`);
@@ -41,8 +45,6 @@ export const getTraceFiles = tool(async ({ traceFileId }) => {
 }, {
     name: 'get_trace_files',
     description: 'Download Playwright trace files from S3',
-    schema: z.object({
-        traceFileId: z.string().describe('Trace file id'),
-    })
+    schema: getTraceFilesSchema
 });
 

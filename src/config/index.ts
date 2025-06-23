@@ -10,6 +10,13 @@ export const config = {
     maxTokens: 4000,
     temperature: 0.2
   },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    model: 'claude-3-5-sonnet-20240620',
+    maxTokens: 4000,
+    temperature: 0.2
+  },
+  llmProvider: process.env.LLM_PROVIDER || 'openai',
 
   s3: {
     apiKey: process.env.S3_API_KEY || 'minioadmin',
@@ -71,6 +78,6 @@ export const config = {
   }
 };
 
-if (!config.openai.apiKey) {
-  throw new AppError('OPENAI_API_KEY environment variable is required', 500);
+if (!config.openai.apiKey && !config.anthropic.apiKey) {
+  throw new AppError('Either OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable is required', 500);
 }
