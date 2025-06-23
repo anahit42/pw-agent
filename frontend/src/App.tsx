@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
-import AnalysisResult, { type Analysis } from './AnalysisResult';
+import { type Analysis } from './AnalysisResult';
 import { io, Socket } from 'socket.io-client';
+import TraceDetails from './TraceDetails';
 
 interface TraceFile {
   id: string;
@@ -210,17 +211,14 @@ function App() {
     (socketRef.current as any)._handlerRegistered = true;
 
     socket.on('connect', () => {
-      // console.log('WebSocket connected');
+      console.log('WebSocket connected');
     });
 
     socket.on('fileProcessed', (data: any) => {
-      console.log('[WebSocket] fileProcessed event:', data);
       if (data && data.jobId && data.status === 'done') {
         setQueuedUploads(prev => {
-          console.log('[WebSocket] Current queuedUploads before removal:', Array.from(prev));
           const newSet = new Set(prev);
           newSet.delete(String(data.jobId));
-          console.log('[WebSocket] Removed from queuedUploads:', String(data.jobId), Array.from(newSet));
           return newSet;
         });
         fetchTraces({ preserveSelection: true });
@@ -229,7 +227,6 @@ function App() {
     });
 
     socket.on('analysisCompleted', (data: any) => {
-      console.log('[WebSocket] analysisCompleted event:', data);
       if (data && data.jobId && data.status === 'done') {
         setQueuedAnalyses(prev => {
           const newSet = new Set(prev);
@@ -599,101 +596,15 @@ function App() {
         </div>
         {error && <div className="error">{error}</div>}
         {selectedTrace ? (
-          <section className="trace-details modern-trace-details">
-            <div className="trace-details-header">
-              <span className="trace-details-title" title={selectedTrace.originalFileName}>
-                {selectedTrace.originalFileName}
-              </span>
-            </div>
-            <div className="trace-details-info">
-              {selectedTrace.uploadedAt && (
-                <div className="trace-info-row">
-                  <span className="trace-info-label" title="Uploaded">Uploaded:</span>
-                  <span className="trace-info-value">{new Date(selectedTrace.uploadedAt).toLocaleString()}</span>
-                </div>
-              )}
-              {selectedTrace.size && (
-                <div className="trace-info-row">
-                  <span className="trace-info-label" title="File Size">Size:</span>
-                  <span className="trace-info-value">{formatFileSize(selectedTrace.size || 0)}</span>
-                </div>
-              )}
-            </div>
-
-            {(analysisResult || (selectedTrace.analyses ?? []).length > 0) ? (
-              <div className="analysis-result">
-                <div className="analysis-header">
-                  <h3>Analyses</h3>
-                </div>
-                {analysisResult && (
-                    <>
-                      <AnalysisResult analysis={analysisResult} analyzedAt="just now" />
-                      {((selectedTrace.analyses ?? []).length > 0) && (
-                          <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
-                      )}
-                    </>
-                )}
-                {(selectedTrace.analyses ?? []).map((analysis: Analysis, idx: number) => (
-                    <React.Fragment key={analysis.id}>
-                      <AnalysisResult analysis={analysis} analyzedAt={analysis.analyzedAt ?? ''} />
-                      {idx < (selectedTrace.analyses ?? []).length - 1 && (
-                          <hr style={{border: 0, borderTop: '2px dashed #3a4660', margin: '22px 0'}}/>
-                      )}
-                    </React.Fragment>
-                ))}
-                <div className="analysis-actions">
-                  {/* Analysis button removed - only one analysis allowed per trace */}
-                </div>
-              </div>
-            ) : (queuedAnalyses.has(selectedTrace.id) || analysisStatus === 'processing') ? (
-              <div className="analysis-loading">
-                <div className="analysis-loading-content">
-                  <div className="analysis-loading-icon">
-                    <span className="spinner"></span>
-                  </div>
-                  <h3>Analyzing Trace...</h3>
-                  <p>AI is analyzing your Playwright trace to provide insights and debugging information.</p>
-                  <div className="analysis-loading-steps">
-                    <div className="loading-step">
-                      <span className="step-icon">🔍</span>
-                      <span>Extracting trace data</span>
-                    </div>
-                    <div className="loading-step">
-                      <span className="step-icon">🧠</span>
-                      <span>Analyzing test failures</span>
-                    </div>
-                    <div className="loading-step">
-                      <span className="step-icon">💡</span>
-                      <span>Generating insights</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="no-analysis-info">
-                <div className="no-analysis-icon">🔍</div>
-                <h3>Ready to Analyze</h3>
-                <p>Get insights from your Playwright trace (one-time analysis)</p>
-                <button
-                  className="analyze-action-btn"
-                  onClick={handleAnalyze}
-                  disabled={analyzing}
-                >
-                  {analyzing ? (
-                    <>
-                      <span className="spinner"></span>
-                      Analyzing Trace...
-                    </>
-                  ) : (
-                    <>
-                      <span className="analyze-icon">⚡</span>
-                      Start Analysis
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </section>
+          <TraceDetails
+            selectedTrace={selectedTrace}
+            analysisResult={analysisResult}
+            analysisStatus={analysisStatus}
+            queuedAnalyses={queuedAnalyses}
+            analyzing={analyzing}
+            formatFileSize={formatFileSize}
+            handleAnalyze={handleAnalyze}
+          />
         ) : (
           <div className="no-trace">Select a trace from the sidebar to view details.</div>
         )}
