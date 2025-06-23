@@ -15,6 +15,7 @@ import {
 
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { AppError } from '../utils/custom-errors';
 
 import { getTraceFiles } from './tools';
 
@@ -78,12 +79,12 @@ const graph = workflow.compile({ checkpointer: memory });
 
 export async function analyzeTraceFile(traceFileId: string) {
     logger.info(`Analyze PW test trace, traceFileId: ${traceFileId}`);
-
-    const finalState = await graph.invoke(
-        {
-            messages: [
-                new HumanMessage({
-                    content: `You are an expert debugging assistant for Playwright tests with deep expertise in web automation, network protocols, browser internals, and test stability analysis.
+    try {
+        const finalState = await graph.invoke(
+            {
+                messages: [
+                    new HumanMessage({
+                        content: `You are an expert debugging assistant for Playwright tests with deep expertise in web automation, network protocols, browser internals, and test stability analysis.
 
 Analyze ALL available trace data with forensic-level precision:
 
@@ -134,14 +135,20 @@ Analyze ALL available trace data with forensic-level precision:
   "correlatedEvents": "Timeline event relationships"
 }
 
-Do not include \` characters, \\\\n, or any extra explanation.
+Do not include \` characters, \\n, or any extra explanation.
 
 Trace file id: ${traceFileId}`
-                })
-        ],
-        },
-        { recursionLimit: 10, configurable: { thread_id: traceFileId } }
-    );
-
-    return finalState.messages[finalState.messages.length - 1].content;
+                    })
+                ],
+            },
+            { recursionLimit: 10, configurable: { thread_id: traceFileId } }
+        );
+        return finalState.messages[finalState.messages.length - 1].content;
+    } catch (error) {
+        logger.error(`Error during langgraph analysis for traceFileId ${traceFileId}:`, error);
+        throw new AppError(
+            `LangGraph analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            500
+        );
+    }
 }
