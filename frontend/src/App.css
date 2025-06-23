@@ -935,10 +935,11 @@ html, body, #root {
 .no-analysis-info {
   text-align: center;
   padding: 40px 20px;
-  background: #1a2233;
+  background: #232a3a;
   border-radius: 12px;
   margin-top: 20px;
   border: 1px solid #232a3a;
+  color: #b0bad6;
 }
 .no-analysis-icon {
   font-size: 2.5em;
