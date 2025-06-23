@@ -92,6 +92,10 @@ export class BaseQueueManager<JobData> {
 
     public async addJob(data: JobData, jobId: string, priority = 1): Promise<Job<any>> {
         const queue = this.getQueue();
+        const existingJob = await queue.getJob(jobId);
+        if (existingJob) {
+            await existingJob.remove();
+        }
         return await queue.add(this.options.jobName as any, data as any, {
             jobId,
             priority,
