@@ -1,6 +1,6 @@
 import { Queue, Worker, Job, QueueOptions } from 'bullmq';
 import { logger } from '../utils/logger';
-import { getSharedRedisClient } from '../utils/redis';
+import { config } from '../config';
 
 export interface BaseQueueManagerOptions<JobData> {
     queueName: string;
@@ -21,9 +21,11 @@ export class BaseQueueManager<JobData> {
 
     private getQueue(): Queue<JobData> {
         if (!this.queue) {
-            const redis = getSharedRedisClient();
             this.queue = new Queue(this.options.queueName, {
-                connection: redis,
+                connection: {
+                    ...config.redis,
+                    connectionName: 'queues'
+                },
                 defaultJobOptions: this.options.defaultJobOptions,
             });
             this.queue.on('waiting', (job: any) => {
@@ -35,12 +37,14 @@ export class BaseQueueManager<JobData> {
 
     private getWorker(): Worker<JobData> {
         if (!this.worker) {
-            const redis = getSharedRedisClient();
             this.worker = new Worker(
                 this.options.queueName,
                 this.options.jobHandler,
                 {
-                    connection: redis,
+                    connection: {
+                        ...config.redis,
+                        connectionName: 'queues'
+                    },
                     concurrency: this.options.concurrency,
                 }
             );
@@ -53,10 +57,6 @@ export class BaseQueueManager<JobData> {
                 if (job) {
                     logger.error(`${this.options.queueName} job ${job.id} failed:`, err.message);
                 }
-            });
-
-            this.worker.on('ready', () => {
-                logger.info(`Worker ${this.options.queueName} is ready`);
             });
 
             this.worker.on('error', (err: Error) => {
@@ -98,15 +98,13 @@ export class BaseQueueManager<JobData> {
          * true = do not wait for current jobs to finish
          */
         if (this.worker) {
-            await this.worker.pause(true);
-            await this.worker.close(true);
+            await this.worker.close();
         }
 
         /**
          * Pause queue (stop publishing new jobs)
          */
         if (this.queue) {
-            await this.queue.pause();
             await this.queue.close();
         }
     }
