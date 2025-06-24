@@ -51,6 +51,8 @@ Analyze ALL available trace data with forensic-level precision:
   "correlatedEvents": "Timeline event relationships"
 }}
 
+DO NOT say anything except the JSON. Do not explain. Do not add any preamble or postscript. If you cannot answer, return an empty JSON object {{}}.
+
 Trace file id: {traceFileId}`;
 
 export const playwrightDebugPrompt = new PromptTemplate({

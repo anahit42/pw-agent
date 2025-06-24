@@ -17,10 +17,24 @@ export async function extractTraceFiles(buffer: Buffer, fileNames: string[]): Pr
     return results
 }
 
+export function extractFirstJsonBlock(text: string): string {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+        throw new AppError('No JSON found in model output');
+    }
+
+    return match[0];
+}
+
 export function parseToJSON(result: unknown): Record<string, unknown> {
     let parsedResult;
     try {
-        parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+        if (typeof result === 'string') {
+            const jsonString = extractFirstJsonBlock(result);
+            parsedResult = JSON.parse(jsonString);
+        } else {
+            parsedResult = result;
+        }
     } catch (e) {
         throw new AppError('Failed to parse analysis result');
     }
