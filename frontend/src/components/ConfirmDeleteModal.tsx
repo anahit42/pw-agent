@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from './ConfirmDeleteModal.module.css';
 
 interface ConfirmDeleteModalProps {
   show: boolean;
@@ -17,35 +18,35 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 }) => {
   if (!show) return null;
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="modal-icon">
+    <div className={styles['modal-overlay']} onClick={onCancel}>
+      <div className={styles['modal-content']} onClick={(e) => e.stopPropagation()}>
+        <div className={styles['modal-header']}>
+          <div className={styles['modal-icon']}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke="#ff4d6d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h3 className="modal-title">Delete Trace</h3>
+          <h3 className={styles['modal-title']}>Delete Trace</h3>
         </div>
-        <div className="modal-body">
+        <div className={styles['modal-body']}>
           <p>Are you sure you want to delete this trace? This action cannot be undone.</p>
         </div>
-        <div className="modal-actions">
+        <div className={styles['modal-actions']}>
           <button
-            className="modal-btn modal-btn-secondary"
+            className={`${styles['modal-btn']} ${styles['modal-btn-secondary']}`}
             onClick={onCancel}
             disabled={deleting === traceToDelete}
           >
             Cancel
           </button>
           <button
-            className="modal-btn modal-btn-danger"
+            className={`${styles['modal-btn']} ${styles['modal-btn-danger']}`}
             onClick={onConfirm}
             disabled={deleting === traceToDelete}
           >
             {deleting === traceToDelete ? (
               <>
-                <span className="spinner-small"></span>
+                <span className={styles['spinner-small']}></span>
                 Deleting...
               </>
             ) : (

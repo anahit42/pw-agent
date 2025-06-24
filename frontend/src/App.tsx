@@ -340,7 +340,7 @@ function App() {
   };
 
   return (
-    <div className="chatgpt-layout">
+    <div className="chat-layout">
       <ErrorPopup error={error || ''} onClose={() => setError(null)} />
       <aside className="sidebar">
         <div className="sidebar-header">
