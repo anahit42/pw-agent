@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
 import { type Analysis } from './AnalysisResult';
@@ -9,6 +9,9 @@ import SidebarUploadForm from './SidebarUploadForm';
 import QueuedUploadsSection from './QueuedUploadsSection';
 import TraceList from './TraceList';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { groupTracesByDate, formatFileSize, formatTime } from './utils';
+import { fetchTraces as apiFetchTraces, fetchTraceDetails as apiFetchTraceDetails, fetchAnalysisStatus, uploadTrace, analyzeTrace, deleteTrace } from './api';
+import { useTraceSocket } from './useTraceSocket';
 
 interface TraceFile {
   id: string;
@@ -52,54 +55,7 @@ function App() {
   const uploadLock = useRef(false);
   const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
 
-  const groupTracesByDate = (traces: TraceFile[]): DateGroup[] => {
-    const groups: { [key: string]: TraceFile[] } = {};
-
-    traces.forEach(trace => {
-      const date = trace.uploadedAt ? new Date(trace.uploadedAt) : new Date();
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      let groupKey: string;
-
-      if (date.toDateString() === today.toDateString()) {
-        groupKey = 'today';
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        groupKey = 'yesterday';
-      } else if (date.getTime() > today.getTime() - 7 * 24 * 60 * 60 * 1000) {
-        groupKey = 'this-week';
-      } else if (date.getTime() > today.getTime() - 30 * 24 * 60 * 60 * 1000) {
-        groupKey = 'this-month';
-      } else {
-        groupKey = 'older';
-      }
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(trace);
-    });
-
-    // Convert to array and sort by date
-    const groupOrder = ['today', 'yesterday', 'this-week', 'this-month', 'older'];
-    return groupOrder
-      .filter(key => groups[key] && groups[key].length > 0)
-      .map(key => ({
-        date: key,
-        label: key === 'today' ? 'Today' :
-               key === 'yesterday' ? 'Yesterday' :
-               key === 'this-week' ? 'This week' :
-               key === 'this-month' ? 'This month' : 'Older',
-        traces: groups[key].sort((a, b) => {
-          const dateA = a.uploadedAt ? new Date(a.uploadedAt) : new Date(0);
-          const dateB = b.uploadedAt ? new Date(b.uploadedAt) : new Date(0);
-          return dateB.getTime() - dateA.getTime(); // Most recent first
-        })
-      }));
-  };
-
-  const fetchTraces = async (opts?: { preserveSelection?: boolean }) => {
+  const fetchTraces = useCallback(async (opts?: { preserveSelection?: boolean }) => {
     try {
       setError(null);
       const res = await fetch(`${API_BASE}?page=1&limit=50`);
@@ -126,9 +82,9 @@ function App() {
     } catch (err) {
       setError('Failed to fetch trace files');
     }
-  };
+  }, [selectedTraceId]);
 
-  const fetchTraceDetails = async (id: string) => {
+  const fetchTraceDetails = useCallback(async (id: string) => {
     try {
       setError(null);
       const res = await fetch(`${API_BASE}/${id}`);
@@ -177,11 +133,24 @@ function App() {
       setSelectedTrace(null);
       setAnalysisStatus(null);
     }
-  };
+  }, []);
+
+  const setSelectedTraceIdCallback = useCallback((id: string) => setSelectedTraceId(id), []);
+  const setErrorCallback = useCallback((err: string | null) => setError(err), []);
+
+  useTraceSocket({
+    userId,
+    setQueuedUploads,
+    setQueuedAnalyses,
+    fetchTraces,
+    fetchTraceDetails,
+    setSelectedTraceId: setSelectedTraceIdCallback,
+    setError: setErrorCallback,
+  });
 
   useEffect(() => {
     fetchTraces();
-  }, []);
+  }, [fetchTraces]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -204,80 +173,6 @@ function App() {
   }, [selectedTraceId]);
 
   useEffect(() => {
-    // Prevent duplicate socket event handler registration
-    if (socketRef.current && (socketRef.current as any)._handlerRegistered) return;
-    // Connect to websocket server
-    const socket = io('http://localhost:3000', {
-      path: '/socket.io',
-      query: { userId },
-      transports: ['websocket'],
-    });
-    socketRef.current = socket;
-    (socketRef.current as any)._handlerRegistered = true;
-
-    socket.on('connect', () => {
-      console.log('WebSocket connected');
-    });
-
-    socket.on('fileProcessed', (data: any) => {
-      if (data && data.jobId && data.status === 'done') {
-        setQueuedUploads(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(String(data.jobId));
-          return newSet;
-        });
-        fetchTraces({ preserveSelection: true });
-        setSelectedTraceId(data.jobId);
-      }
-    });
-
-    socket.on('analysisCompleted', (data: any) => {
-      if (data && data.jobId && data.status === 'done') {
-        setQueuedAnalyses(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(String(data.jobId));
-          return newSet;
-        });
-        fetchTraces({ preserveSelection: true });
-        fetchTraceDetails(data.jobId);
-        setSelectedTraceId(data.jobId);
-      }
-    });
-
-    socket.on('jobError', (data: {
-      jobType: string;
-      jobId: string;
-      userId: string;
-      status: 'error',
-      error: string;
-      jobCategory: string;
-    }) => {
-      if (data && data.jobId && data.status === 'error') {
-        setError(`${data.error}`);
-        if (data.jobCategory === 'analysis') {
-          setQueuedAnalyses(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(String(data.jobId));
-            return newSet;
-          });
-        } else {
-          setQueuedUploads(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(String(data.jobId));
-            return newSet;
-          });
-        }
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-      (socketRef.current as any)._handlerRegistered = false;
-    };
-    // eslint-disable-next-line
-  }, []);
-
-  useEffect(() => {
     if (!error) return;
     const timeout = setTimeout(() => setError(null), 5000);
     return () => clearTimeout(timeout);
@@ -287,14 +182,6 @@ function App() {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const handleUpload = async (e: FormEvent) => {
@@ -458,12 +345,6 @@ function App() {
 
   const getTraceStatus = (trace: TraceFile): 'READY' | null => {
     return trace._count && trace._count.analyses > 0 ? 'READY' : null;
-  };
-
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
