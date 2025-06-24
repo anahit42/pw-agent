@@ -756,63 +756,63 @@ html, body, #root {
   .main-content {
     padding: 10px 4px;
   }
-  
+
   .main-upload-form {
     padding: 16px;
     margin-bottom: 20px;
   }
-  
+
   .main-upload-form input[type="file"] {
     padding: 10px;
     font-size: 0.9em;
   }
-  
+
   .main-upload-form button {
     padding: 10px 20px;
     font-size: 0.9em;
     min-width: 100px;
   }
-  
+
   .file-drop-zone {
     min-height: 100px;
   }
-  
+
   .file-drop-content {
     padding: 16px;
   }
-  
+
   .file-drop-icon {
     font-size: 2em;
   }
-  
+
   .primary-text {
     font-size: 1em;
   }
-  
+
   .secondary-text {
     font-size: 0.85em;
   }
-  
+
   .file-drop-hint {
     font-size: 0.75em;
   }
-  
+
   .file-preview {
     padding: 12px;
   }
-  
+
   .file-icon {
     font-size: 1.5em;
   }
-  
+
   .file-name {
     font-size: 0.9em;
   }
-  
+
   .file-size {
     font-size: 0.8em;
   }
-  
+
   .upload-btn {
     padding: 10px 20px;
     font-size: 0.9em;
@@ -1009,7 +1009,7 @@ html, body, #root {
 .analysis-loading {
   text-align: center;
   padding: 40px 20px;
-  background: #1a2233;
+  background: #232a3a;
   border-radius: 12px;
   margin-top: 20px;
   border: 1px solid #232a3a;
