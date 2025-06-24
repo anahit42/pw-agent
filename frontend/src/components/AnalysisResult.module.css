@@ -1,0 +1,122 @@
+.analysis-result {
+  background: #232a3a;
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 16px;
+  font-size: 0.97em;
+  max-width: 100%;
+  overflow-x: auto;
+  color: #b0bad6;
+}
+
+.section-card {
+  background: #232a3a;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(10,16,32,0.08);
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1px solid #232a3a;
+  max-width: 700px;
+}
+
+.section-title {
+  color: #a3c9e8;
+  font-weight: 600;
+  font-size: 1.07em;
+  margin: 8px 0 10px 0;
+  letter-spacing: 0.1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.failure-section {
+  background: rgba(176,0,32,0.04);
+  box-shadow: 0 1px 4px rgba(176,0,32,0.04);
+  border-left: 2px solid #b36a6a;
+  padding-left: 26px;
+}
+
+.failure-title {
+  color: #e07a88;
+  font-weight: 700;
+  font-size: 1.08em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.failure-block {
+  font-weight: 500;
+  font-size: 1.04em;
+  color: #e0e6f0;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stack-section {
+  background: rgba(126,207,255,0.04);
+  box-shadow: 0 1px 4px rgba(126,207,255,0.04);
+  border-left: 2px solid #7ecfff;
+  padding-left: 26px;
+}
+
+.stack-block {
+  font-weight: 500;
+  font-size: 1.04em;
+  color: #e0e6f0;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-value {
+  color: #e0e6f0;
+  margin-left: 8px;
+  white-space: pre-line;
+  font-size: 1.18em;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.value {
+  color: #e0e6f0;
+  margin-left: 8px;
+  white-space: pre-line;
+}
+
+.analyzed-at-row {
+  margin-top: 18px;
+  font-size: 0.95em;
+  color: #8fa1c7;
+  justify-content: flex-end;
+  font-weight: 400;
+  display: flex;
+  align-items: flex-start;
+}
+
+.summary-section {
+  margin-bottom: 18px;
+}
+
+.suggestions-section {
+  margin-top: 22px;
+}
+
+.analyzed-at-label {
+  font-weight: 400;
+}
+
+.analyzed-at-value {
+  margin-left: 8px;
+} 

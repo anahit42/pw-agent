@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import './App.css';
-import { type Analysis } from './AnalysisResult';
-import { io, Socket } from 'socket.io-client';
-import TraceDetails from './TraceDetails';
-import ErrorPopup from './ErrorPopup';
-import SidebarUploadForm from './SidebarUploadForm';
-import QueuedUploadsSection from './QueuedUploadsSection';
-import TraceList from './TraceList';
-import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { type Analysis } from './components/AnalysisResult.tsx';
+import TraceDetails from './components/TraceDetails.tsx';
+import ErrorPopup from './components/ErrorPopup.tsx';
+import SidebarUploadForm from './components/SidebarUploadForm.tsx';
+import QueuedUploadsSection from './components/QueuedUploadsSection.tsx';
+import TraceList from './components/TraceList.tsx';
+import ConfirmDeleteModal from './components/ConfirmDeleteModal.tsx';
 import { groupTracesByDate, formatFileSize, formatTime } from './utils';
-import { fetchTraces as apiFetchTraces, fetchTraceDetails as apiFetchTraceDetails, fetchAnalysisStatus, uploadTrace, analyzeTrace, deleteTrace } from './api';
 import { useTraceSocket } from './useTraceSocket';
 
 interface TraceFile {
@@ -22,12 +20,6 @@ interface TraceFile {
   _count?: {
     analyses: number;
   };
-}
-
-interface DateGroup {
-  date: string;
-  label: string;
-  traces: TraceFile[];
 }
 
 const API_BASE = '/api/traces';
@@ -50,7 +42,6 @@ function App() {
   const [traceToDelete, setTraceToDelete] = useState<string | null>(null);
   const [queuedUploads, setQueuedUploads] = useState<Set<string>>(new Set());
   const [queuedAnalyses, setQueuedAnalyses] = useState<Set<string>>(new Set());
-  const socketRef = useRef<Socket | null>(null);
   const userId = 'hardcodedUserId'; // Should match backend authMiddleware
   const uploadLock = useRef(false);
   const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
@@ -79,7 +70,8 @@ function App() {
         }
         return newSet;
       });
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err: unknown) {
       setError('Failed to fetch trace files');
     }
   }, [selectedTraceId]);

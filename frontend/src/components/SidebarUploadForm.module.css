@@ -1,0 +1,105 @@
+.sidebar-upload-form {
+  margin: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-drop-area {
+  padding: 16px;
+  border: 2px dashed #3a4256;
+  border-radius: 12px;
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  background: #1a2233;
+}
+
+.file-drop-area.drag-over {
+  border-color: #5a6b8a;
+  transform: scale(1.03);
+}
+
+.file-drop-area .file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.upload-icon,
+.upload-text,
+.upload-subtext,
+.upload-hint {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.upload-icon {
+  margin-bottom: 8px;
+  color: #8b9bb4;
+}
+
+.upload-text {
+  font-weight: 600;
+  color: #e0e6f0;
+  line-height: 1.2;
+}
+
+.upload-subtext {
+  font-size: 0.9em;
+  color: #8b9bb4;
+  margin-top: 2px;
+}
+
+.upload-hint {
+  font-size: 0.8em;
+  color: #6b7a8a;
+  margin-top: 8px;
+}
+
+.sidebar-upload-btn {
+  width: 100%;
+  padding: 8px;
+  background: #3a4256;
+  border: none;
+  border-radius: 8px;
+  color: #f0f4ff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sidebar-upload-btn:hover {
+  background: #4a5568;
+}
+
+.sidebar-upload-progress {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #e0e6f0;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #3a4256;
+  border-top: 3px solid #b0bad6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+} 

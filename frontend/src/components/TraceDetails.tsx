@@ -1,5 +1,6 @@
 import React from 'react';
-import AnalysisResult, { type Analysis } from './AnalysisResult';
+import AnalysisResult, { type Analysis } from './AnalysisResult.tsx';
+import styles from './TraceDetails.module.css';
 
 interface TraceFile {
   id: string;
@@ -30,30 +31,30 @@ const TraceDetails: React.FC<TraceDetailsProps> = ({
   handleAnalyze,
 }) => {
   return (
-    <section className="trace-details modern-trace-details">
-      <div className="trace-details-header">
-        <span className="trace-details-title" title={selectedTrace.originalFileName}>
+    <section className={`${styles['trace-details']} ${styles['modern-trace-details']}`}>
+      <div className={styles['trace-details-header']}>
+        <span className={styles['trace-details-title']} title={selectedTrace.originalFileName}>
           {selectedTrace.originalFileName}
         </span>
       </div>
-      <div className="trace-details-info">
+      <div className={styles['trace-details-info']}>
         {selectedTrace.uploadedAt && (
-          <div className="trace-info-row">
-            <span className="trace-info-label" title="Uploaded">Uploaded:</span>
-            <span className="trace-info-value">{new Date(selectedTrace.uploadedAt).toLocaleString()}</span>
+          <div className={styles['trace-info-row']}>
+            <span className={styles['trace-info-label']} title="Uploaded">Uploaded:</span>
+            <span className={styles['trace-info-value']}>{new Date(selectedTrace.uploadedAt).toLocaleString()}</span>
           </div>
         )}
         {selectedTrace.size && (
-          <div className="trace-info-row">
-            <span className="trace-info-label" title="File Size">Size:</span>
-            <span className="trace-info-value">{formatFileSize(selectedTrace.size || 0)}</span>
+          <div className={styles['trace-info-row']}>
+            <span className={styles['trace-info-label']} title="File Size">Size:</span>
+            <span className={styles['trace-info-value']}>{formatFileSize(selectedTrace.size || 0)}</span>
           </div>
         )}
       </div>
 
       {(analysisResult || (selectedTrace.analyses ?? []).length > 0) ? (
-        <div className="analysis-result">
-          <div className="analysis-header">
+        <div className={styles['analysis-result']}>
+          <div className={styles['analysis-header']}>
             <h3>Analyses</h3>
           </div>
           {analysisResult && (
@@ -72,52 +73,52 @@ const TraceDetails: React.FC<TraceDetailsProps> = ({
               )}
             </React.Fragment>
           ))}
-          <div className="analysis-actions">
+          <div className={styles['analysis-actions']}>
             {/* Analysis button removed - only one analysis allowed per trace */}
           </div>
         </div>
       ) : (queuedAnalyses.has(selectedTrace.id) || analysisStatus === 'processing') ? (
-        <div className="analysis-loading">
-          <div className="analysis-loading-content">
-            <div className="analysis-loading-icon">
-              <span className="spinner"></span>
+        <div className={styles['analysis-loading']}>
+          <div className={styles['analysis-loading-content']}>
+            <div className={styles['analysis-loading-icon']}>
+              <span className={styles['spinner']}></span>
             </div>
-            <h3>Analyzing Trace...</h3>
-            <p>AI is analyzing your Playwright trace to provide insights and debugging information.</p>
-            <div className="analysis-loading-steps">
-              <div className="loading-step">
-                <span className="step-icon">🔍</span>
+            <h3 className={styles['analysis-loading-h3']}>Analyzing Trace...</h3>
+            <p className={styles['analysis-loading-p']}>AI is analyzing your Playwright trace to provide insights and debugging information.</p>
+            <div className={styles['analysis-loading-steps']}>
+              <div className={styles['loading-step']}>
+                <span className={styles['step-icon']}>🔍</span>
                 <span>Extracting trace data</span>
               </div>
-              <div className="loading-step">
-                <span className="step-icon">🧠</span>
+              <div className={styles['loading-step']}>
+                <span className={styles['step-icon']}>🧠</span>
                 <span>Analyzing test failures</span>
               </div>
-              <div className="loading-step">
-                <span className="step-icon">💡</span>
+              <div className={styles['loading-step']}>
+                <span className={styles['step-icon']}>💡</span>
                 <span>Generating insights</span>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="no-analysis-info">
-          <div className="no-analysis-icon">🔍</div>
+        <div className={styles['no-analysis-info']}>
+          <div className={styles['no-analysis-icon']}>🔍</div>
           <h3>Ready to Analyze</h3>
           <p>Get insights from your Playwright trace (one-time analysis)</p>
           <button
-            className="analyze-action-btn"
+            className={styles['analyze-action-btn']}
             onClick={handleAnalyze}
             disabled={analyzing}
           >
             {analyzing ? (
               <>
-                <span className="spinner"></span>
+                <span className={styles['spinner']}></span>
                 Analyzing Trace...
               </>
             ) : (
               <>
-                <span className="analyze-icon">⚡</span>
+                <span className={styles['analyze-icon']}>⚡</span>
                 Start Analysis
               </>
             )}
@@ -128,4 +129,4 @@ const TraceDetails: React.FC<TraceDetailsProps> = ({
   );
 };
 
-export default TraceDetails; 
+export default TraceDetails;
