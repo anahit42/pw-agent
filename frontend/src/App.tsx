@@ -5,6 +5,10 @@ import { type Analysis } from './AnalysisResult';
 import { io, Socket } from 'socket.io-client';
 import TraceDetails from './TraceDetails';
 import ErrorPopup from './ErrorPopup';
+import SidebarUploadForm from './SidebarUploadForm';
+import QueuedUploadsSection from './QueuedUploadsSection';
+import TraceList from './TraceList';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface TraceFile {
   id: string;
@@ -476,153 +480,41 @@ function App() {
           </span> <b>Traces</b>
         </div>
 
-        <form
-          onSubmit={handleUpload}
-          className={`sidebar-upload-form`}
-        >
-          <div
-            className={`file-drop-area ${isDragOver ? 'drag-over' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="file-input"
-            />
-
-            {showUploadLoader ? (
-              <div className="sidebar-upload-progress">
-                <span className="spinner-small"></span>
-                <span>Uploading...</span>
-              </div>
-            ) : (
-              <>
-                <div className="upload-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" stroke="#8b9bb4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                {file ? (
-                  <>
-                    <div className="upload-text">{file.name}</div>
-                    <div className="upload-hint">{formatFileSize(file.size)}</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="upload-text">Drop trace files here</div>
-                    <div className="upload-subtext">or click to browse</div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          {file && !uploading && (
-            <button type="submit" className="sidebar-upload-btn" disabled={uploading}>
-              Upload
-            </button>
-          )}
-        </form>
+        <SidebarUploadForm
+          file={file}
+          uploading={uploading}
+          showUploadLoader={showUploadLoader}
+          fileInputRef={fileInputRef}
+          isDragOver={isDragOver}
+          onFileChange={handleFileChange}
+          onUpload={handleUpload}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          formatFileSize={formatFileSize}
+        />
 
         <div className="recent-traces-header">
           <h4>Recent Traces</h4>
           <span className="trace-count-badge">{traceFiles.length}</span>
         </div>
 
-        {/* Show queued uploads */}
-        {queuedUploads.size > 0 && (
-          <div className="queued-uploads-section">
-            <h4>Processing...</h4>
-            <ul className="sidebar-list">
-              {Array.from(queuedUploads).map((traceId) => (
-                <li key={traceId} className="sidebar-item queued">
-                  <div className="trace-item-icon">
-                    <span className="spinner-small"></span>
-                  </div>
-                  <div className="trace-item-details">
-                    <div className="trace-item-header">
-                      <span className="trace-item-name">Processing...</span>
-                      <span className="queued-tag">Queued</span>
-                    </div>
-                    <span className="trace-item-time">Extracting files...</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <QueuedUploadsSection queuedUploads={queuedUploads} />
 
-        <ul className="sidebar-list">
-          {traceFiles.length === 0 && <li className="sidebar-empty">No traces</li>}
-          {groupTracesByDate(traceFiles).map((group) => (
-            <React.Fragment key={group.date}>
-              <li className="sidebar-date-header">{group.label}</li>
-              {group.traces.map((trace) => (
-                <li
-                  key={trace.id}
-                  className={`sidebar-item${trace.id === selectedTraceId ? ' selected' : ''}`}
-                  onClick={() => {
-                    setSelectedTraceId(trace.id);
-                    setAnalysisResult(null);
-                    setError(null);
-                  }}
-                >
-                  <div className="trace-item-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h2.5a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-4a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 3h2.5a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-13a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 8h2.5a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1 -2.5 2.5h-2.5a2.5 2.5 0 0 1 -2.5 -2.5v-8a2.5 2.5 0 0 1 2.5 -2.5z" stroke="#b0bad6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  <div className="trace-item-details">
-                    <div className="trace-item-header">
-                      <span className="trace-item-name" title={trace.originalFileName}>{trace.originalFileName}</span>
-                      {getTraceStatus(trace) === 'READY' && (
-                        <span className="analyzed-tag">Analyzed</span>
-                      )}
-                    </div>
-                    <span className="trace-item-time">{formatTime(trace.uploadedAt)}</span>
-                  </div>
-                  <div className="trace-item-actions">
-                    <div className="trace-dropdown">
-                      <button
-                        className="trace-menu-btn"
-                        onClick={(e) => handleDropdownToggle(trace.id, e)}
-                        disabled={deleting === trace.id}
-                        title="More options"
-                      >
-                        {deleting === trace.id ? (
-                          <span className="spinner-small"></span>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="6" cy="12" r="1" fill="currentColor"/>
-                            <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                            <circle cx="18" cy="12" r="1" fill="currentColor"/>
-                          </svg>
-                        )}
-                      </button>
-                      {openDropdown === trace.id && (
-                        <div className="dropdown-menu">
-                          <button
-                            className="dropdown-item"
-                            onClick={(e) => handleRemoveClick(trace.id, e)}
-                            disabled={deleting === trace.id}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </React.Fragment>
-          ))}
-        </ul>
+        <TraceList
+          traceFiles={traceFiles}
+          selectedTraceId={selectedTraceId}
+          groupTracesByDate={groupTracesByDate}
+          getTraceStatus={getTraceStatus}
+          formatTime={formatTime}
+          openDropdown={openDropdown}
+          deleting={deleting}
+          handleDropdownToggle={handleDropdownToggle}
+          handleRemoveClick={handleRemoveClick}
+          setSelectedTraceId={setSelectedTraceId}
+          setAnalysisResult={setAnalysisResult}
+          setError={setError}
+        />
       </aside>
       <main className="main-content">
         <div className="product-description" style={{ marginBottom: 24, color: '#b0bad6', fontSize: '1.1em' }}>
@@ -643,47 +535,13 @@ function App() {
         )}
       </main>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="modal-overlay" onClick={handleCancelDelete}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke="#ff4d6d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <h3 className="modal-title">Delete Trace</h3>
-            </div>
-            <div className="modal-body">
-              <p>Are you sure you want to delete this trace? This action cannot be undone.</p>
-            </div>
-            <div className="modal-actions">
-              <button
-                className="modal-btn modal-btn-secondary"
-                onClick={handleCancelDelete}
-                disabled={deleting === traceToDelete}
-              >
-                Cancel
-              </button>
-              <button
-                className="modal-btn modal-btn-danger"
-                onClick={handleConfirmDelete}
-                disabled={deleting === traceToDelete}
-              >
-                {deleting === traceToDelete ? (
-                  <>
-                    <span className="spinner-small"></span>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        show={showConfirmModal}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        deleting={deleting}
+        traceToDelete={traceToDelete}
+      />
     </div>
   );
 }
